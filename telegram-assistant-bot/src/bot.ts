@@ -21,11 +21,8 @@ bot.use(async (ctx, next) => {
   await next();
 });
 
-// Обычная кнопка-ссылка (не Mini App): открывает Верстак в браузере/встроенном
-// браузере Telegram. Надёжнее для старта, чем нативная встройка Mini App —
-// та требует, чтобы сама страница разрешала показ внутри Telegram, а верстак
-// пока живёт на claude.ai и это не гарантировано.
-const verstakKeyboard = new InlineKeyboard().url("🛠 Открыть верстак", env.VERSTAK_WEBAPP_URL);
+// Настоящая кнопка Mini App: открывает Верстак поверх чата, без выхода в браузер.
+const verstakKeyboard = new InlineKeyboard().webApp("🛠 Открыть верстак", env.VERSTAK_WEBAPP_URL);
 
 bot.command("start", async (ctx) => {
   getOrCreateProfile(ctx.from!.id);
@@ -82,11 +79,22 @@ bot.on("message:text", async (ctx) => {
   const history = getRecentMessages(telegramId);
   const summary = getSummary(telegramId);
 
-  const answer = await askClaude(
-    profile.profile_text,
-    summary,
-    history.map((m) => ({ role: m.role, content: m.content }))
-  );
+  let answer: string;
+  try {
+    answer = await askClaude(
+      profile.profile_text,
+      summary,
+      history.map((m) => ({ role: m.role, content: m.content }))
+    );
+  } catch (err) {
+    console.error("Claude API error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    const hint = message.includes("credit balance")
+      ? "На аккаунте Claude API закончился баланс — пополните на console.anthropic.com → Plans & Billing."
+      : "Проверьте логи на Railway для деталей.";
+    await ctx.reply(`⚠️ Не смог получить ответ от Claude.\n${hint}`);
+    return;
+  }
 
   saveMessage(telegramId, "assistant", answer);
   await ctx.reply(answer, { reply_markup: verstakKeyboard });
