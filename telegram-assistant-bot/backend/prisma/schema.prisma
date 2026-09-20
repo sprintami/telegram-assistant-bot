@@ -1,0 +1,54 @@
+// Верстак — бэкенд P0.
+// Схема сознательно минимальна: только то, что нужно для фундамента
+// (Workspace, User, связь, авторизация через Telegram).
+// Модели задач/продаж/производства/агентов добавляются отдельными миграциями,
+// когда до них дойдёт очередь — здесь не нужно "угадывать" их заранее.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  MEMBER
+}
+
+// Рабочее пространство одного бизнеса (например, METALIZM, Принт Бар, Спринтами
+// или в будущем — воркспейс другого клиента продукта).
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("workspaces")
+}
+
+// Пользователь = человек, авторизовавшийся через Telegram.
+// В пилоте один пользователь состоит в одном воркспейсе (upgrade до
+// многих воркспейсов на пользователя — отдельная задача, не сейчас).
+model User {
+  id         String        @id @default(cuid())
+  telegramId BigInt        @unique
+  username   String?
+  firstName  String?
+  lastName   String?
+  role       WorkspaceRole @default(MEMBER)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+
+  @@index([workspaceId])
+  @@map("users")
+}
