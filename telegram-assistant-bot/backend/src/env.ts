@@ -33,7 +33,15 @@ export const env = {
   // воркспейса ещё нет). Дальше воркспейс переименовывается через API/UI.
   DEFAULT_WORKSPACE_NAME: process.env.DEFAULT_WORKSPACE_NAME || "Мой бизнес",
 
-  // Telegram ID владельца — первый, кто логинится под этим ID, становится
-  // OWNER нового воркспейса. Совпадает с OWNER_TELEGRAM_ID бота.
+  // Telegram ID владельца — первый, кто логинится под этим ID, становится OWNER нового
+  // воркспейса. Совпадает с OWNER_TELEGRAM_ID бота.
   OWNER_TELEGRAM_ID: Number(required("OWNER_TELEGRAM_ID")),
+
+  // Ключ Anthropic API — им отвечают ИИ-агенты верстака (Claude).
+  // Может быть тем же ключом, что и у бота (на Railway проброшено ссылкой на
+  // переменную сервиса bot, чтобы не хранить второй копией секрета вручную).
+  ANTHROPIC_API_KEY: required("ANTHROPIC_API_KEY"),
+
+  // Модель Claude для ответов агентов. То же значение, что и в боте.
+  ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5",
 };
