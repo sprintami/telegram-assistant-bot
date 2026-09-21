@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import { env } from "./env.js";
 
 const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
@@ -74,6 +74,21 @@ export async function askClaude(
     console.error("Claude недоступен, переключаюсь на ChatGPT:", err);
     return askOpenAI(system, history, 1024);
   }
+}
+
+// Распознаём голосовое сообщение через Whisper (OpenAI) — у Anthropic нет своего STT,
+// поэтому для этой функции всегда нужен OPENAI_API_KEY, даже если чат отвечает через Claude.
+export async function transcribeVoice(audioBuffer: Buffer, filename = "voice.ogg"): Promise<string> {
+  if (!openai) {
+    throw new Error("OPENAI_API_KEY не задан — распознавание голоса недоступно");
+  }
+  const file = await toFile(audioBuffer, filename);
+  const result = await openai.audio.transcriptions.create({
+    model: "whisper-1",
+    file,
+    language: "ru",
+  });
+  return (result.text || "").trim();
 }
 
 // Сжимаем старые сообщения в короткое резюме
