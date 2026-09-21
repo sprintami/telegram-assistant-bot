@@ -1,13 +1,5 @@
-// Верстак — бэкенд P0.
-// Схема сознательно минимальна: только то, что нужно для фундамента
-// (Workspace, User, связь, авторизация через Telegram).
-// Модели задач/продаж/производства добавляются отдельными миграциями,
-// когда до них дойдёт очередь — здесь не нужно "угадывать" их заранее.
-//
-// Исключение: AgentMessage — первая модель общего интерфейса верстака —
-// переписка пользователя с каждым ИИ-агентом (Дизайнер/Финансист/Юрист/Маркетолог).
-// Конкретные роли/инструкции агентов пока живут в коде (src/agents.ts),
-// не в базе — настраивать их будем отдельным шагом.
+// Verstak backend, real website (not a Claude artifact).
+// Agent roles removed as separate UI entities - single assistant via ChatGPT.
 
 generator client {
   provider = "prisma-client-js"
@@ -23,23 +15,19 @@ enum WorkspaceRole {
   MEMBER
 }
 
-// Рабочее пространство одного бизнеса (например, METALIZM, Принт Бар, Спринтами
-// или в будущем — воркспейс другого клиента продукта).
 model Workspace {
   id        String   @id @default(cuid())
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users User[]
-  tasks Task[]
+  users   User[]
+  tasks   Task[]
+  records Record[]
 
   @@map("workspaces")
 }
 
-// Пользователь = человек, авторизовавшийся через Telegram.
-// В пилоте один пользователь состоит в одном воркспейсе (upgrade до многих
-// воркспейсов на пользователя — отдельная задача, не сейчас).
 model User {
   id         String        @id @default(cuid())
   telegramId BigInt        @unique
@@ -55,28 +43,8 @@ model User {
   updatedAt  DateTime @updatedAt
   lastSeenAt DateTime @default(now())
 
-  agentMessages AgentMessage[]
-
   @@index([workspaceId])
   @@map("users")
-}
-
-// Одно сообщение в переписке пользователя с одним из ИИ-агентов верстака.
-// agentKey — строковый ключ агента ("designer" | "financier" | "lawyer" | "marketer"),
-// описан в src/agents.ts. У каждого пользователя — один непрерывный чат
-// на каждого агента (без отдельных "тредов/сессий" пока).
-model AgentMessage {
-  id       String @id @default(cuid())
-  userId   String
-  user     User   @relation(fields: [userId], references: [id])
-  agentKey String
-  role     String // "user" | "assistant"
-  content  String
-
-  createdAt DateTime @default(now())
-
-  @@index([userId, agentKey, createdAt])
-  @@map("agent_messages")
 }
 
 enum TaskProject {
@@ -98,11 +66,10 @@ enum TaskStatus {
   DONE
 }
 
-// Задача верстака. Может быть создана человеком или ИИ-агентом
-// (через tool use в разговоре с агентом) — createdByAgentKey хранит
-// ключ агента, если задачу создал он; null означает, что создал человек.
+// Task id is client-generated (frontend does doc(id).set(...)); the POST
+// route in routes/tasks.ts upserts by that id.
 model Task {
-  id          String      @id @default(cuid())
+  id          String      @id
   workspaceId String
   workspace   Workspace   @relation(fields: [workspaceId], references: [id])
 
@@ -112,13 +79,33 @@ model Task {
   lever       TaskLever?
   status      TaskStatus  @default(NEW)
   dueDate     DateTime?
-  checklist   Json?       // [{ text: string, done: boolean }]
+  checklist   Json?
 
-  createdByAgentKey String? // "designer" | "financier" | "lawyer" | "marketer" | null = человек
+  // Everything that did not get its own column, ported from the old
+  // artifact: dueTime, reminder, links, attachments, chat (per-task thread).
+  extra Json?
+
+  createdByAgentKey String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, status])
   @@map("tasks")
+}
+
+// Generic record for the other verstak modules - sales, production,
+// finance, documents, regulations, goals - instead of 6 separate models.
+model Record {
+  id          String    @id
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  module      String
+  data        Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, module])
+  @@map("records")
 }
