@@ -44,4 +44,8 @@ OPENAI_API_KEY: required("OPENAI_API_KEY"),
 
 // Модель OpenAI для ответов агентов.
 OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o",
+
+// Секрет для доступа к /chat — им защищён прокси-эндпоинт, через который
+// Верстак (артефакт со своей базой) стучится за ответами ChatGPT.
+VERSTAK_CHAT_SECRET: required("VERSTAK_CHAT_SECRET"),
 };
