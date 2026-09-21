@@ -8,7 +8,7 @@ import {
   getRecentMessages,
   getSummary,
 } from "./db.js";
-import { askClaude } from "./ai.js";
+import { askClaude, transcribeVoice } from "./ai.js";
 import { maintainMemory } from "./memory.js";
 
 const bot = new Bot(env.BOT_TOKEN);
@@ -67,11 +67,10 @@ bot.command("remember", async (ctx) => {
   await ctx.reply("Запомнил.");
 });
 
-// --- Обычные текстовые сообщения — уходят Claude ---
-bot.on("message:text", async (ctx) => {
-  const telegramId = ctx.from.id;
+// --- Общая логика ответа: и обычный текст, и текст, распознанный из голосового,
+// проходят через один и тот же путь (профиль + память + Claude/ChatGPT). ---
+async function respondToUserText(ctx: any, telegramId: number, userText: string) {
   const profile = getOrCreateProfile(telegramId);
-  const userText = ctx.message.text;
 
   saveMessage(telegramId, "user", userText);
   await ctx.replyWithChatAction("typing");
@@ -101,6 +100,44 @@ bot.on("message:text", async (ctx) => {
 
   // сжатие памяти — не блокирует ответ пользователю
   maintainMemory(telegramId).catch((err) => console.error("maintainMemory failed:", err));
+}
+
+// --- Обычные текстовые сообщения — уходят Claude ---
+bot.on("message:text", async (ctx) => {
+  await respondToUserText(ctx, ctx.from.id, ctx.message.text);
+});
+
+// --- Голосовые сообщения — сначала распознаём через Whisper, дальше как обычный текст ---
+bot.on("message:voice", async (ctx) => {
+  const telegramId = ctx.from.id;
+  await ctx.replyWithChatAction("typing");
+
+  let transcript: string;
+  try {
+    const file = await ctx.getFile();
+    if (!file.file_path) throw new Error("Telegram не вернул путь к файлу голосового");
+    const url = `https://api.telegram.org/file/bot${env.BOT_TOKEN}/${file.file_path}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Не удалось скачать голосовое (HTTP ${res.status})`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    transcript = await transcribeVoice(buffer, "voice.ogg");
+  } catch (err) {
+    console.error("Ошибка распознавания голосового:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    const hint = message.includes("OPENAI_API_KEY")
+      ? "Для распознавания голоса нужен OPENAI_API_KEY на Railway — сейчас он не задан."
+      : "Проверьте логи на Railway для деталей.";
+    await ctx.reply(`⚠️ Не смог распознать голосовое.\n${hint}`);
+    return;
+  }
+
+  if (!transcript) {
+    await ctx.reply("⚠️ Не расслышал — в голосовом не нашлось речи. Попробуйте ещё раз или напишите текстом.");
+    return;
+  }
+
+  await ctx.reply(`🎙 Распознал: «${transcript}»`);
+  await respondToUserText(ctx, telegramId, transcript);
 });
 
 bot.catch((err) => {
