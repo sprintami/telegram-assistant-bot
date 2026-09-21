@@ -37,11 +37,11 @@ export const env = {
   // воркспейса. Совпадает с OWNER_TELEGRAM_ID бота.
   OWNER_TELEGRAM_ID: Number(required("OWNER_TELEGRAM_ID")),
 
-  // Ключ Anthropic API — им отвечают ИИ-агенты верстака (Claude).
-  // Может быть тем же ключом, что и у бота (на Railway проброшено ссылкой на
-  // переменную сервиса bot, чтобы не хранить второй копией секрета вручную).
-  ANTHROPIC_API_KEY: required("ANTHROPIC_API_KEY"),
+  // Ключ OpenAI API — им отвечают ИИ-агенты верстака (ChatGPT).
+// Тот же ключ, что и у личного ассистента в боте (на Railway проброшено
+// ссылкой на переменную сервиса bot, чтобы не хранить второй копией секрета).
+OPENAI_API_KEY: required("OPENAI_API_KEY"),
 
-  // Модель Claude для ответов агентов. То же значение, что и в боте.
-  ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5",
+// Модель OpenAI для ответов агентов.
+OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o",
 };
