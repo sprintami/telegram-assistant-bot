@@ -9,10 +9,15 @@ import { meRoutes } from "./routes/me.js";
 import { tasksRoutes } from "./routes/tasks.js";
 import { recordsRoutes } from "./routes/records.js";
 import { chatRoutes } from "./routes/chat.js";
+import { imageRoutes } from "./routes/image.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const app = Fastify({ logger: true });
+// Дефолтный лимит тела запроса у Fastify — 1 МБ, а сгенерированная картинка,
+// прикреплённая к задаче как base64 внутри extra.attachments (см. /tasks
+// PATCH), легко его превышает. Поднимаем лимит для всего сервиса — приложение
+// однопользовательское, так что риска перегрузки нет.
+const app = Fastify({ logger: true, bodyLimit: 12 * 1024 * 1024 });
 
 await app.register(cors, {
     origin: env.ALLOWED_ORIGINS.length > 0 ? env.ALLOWED_ORIGINS : true,
@@ -25,6 +30,7 @@ await app.register(meRoutes);
 await app.register(tasksRoutes);
 await app.register(recordsRoutes);
 await app.register(chatRoutes);
+await app.register(imageRoutes);
 
 // Frontend (public/index.html - the same Verstak, now a real site instead
 // of a Claude artifact) is served by this same service: one Railway
