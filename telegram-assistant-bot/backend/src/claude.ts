@@ -1,8 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { env } from "./env.js";
 import { taskTools, executeTaskTool } from "./tools/tasks.js";
 
-const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -15,59 +15,68 @@ export interface AgentContext {
 
 const MAX_TOOL_ROUNDS = 5;
 
+// Инструменты описаны в формате Anthropic (name/description/input_schema).
+// OpenAI ждёт формат function-calling — конвертируем один раз при старте.
+const openaiTools = (taskTools as any[]).map((tool) => ({
+  type: "function" as const,
+  function: {
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema,
+  },
+}));
+
 /**
- * Один "ход" разговора с агентом. В отличие от простого запроса к Claude —
- * это цикл (agentic loop): если Claude решает вызвать инструмент (создать/
- * изменить/прочитать задачи), мы выполняем его на нашей стороне и отдаём
- * результат обратно Claude, пока он не сформулирует финальный текстовый
- * ответ (или не кончится лимит попыток — защита от зацикливания).
+ * Один "ход" разговора с агентом. Агентный цикл: если модель решает вызвать
+ * инструмент (создать/изменить/прочитать задачи), мы выполняем его на своей
+ * стороне и отдаём результат обратно модели, пока она не даст финальный ответ
+ * (или не кончится лимит шагов).
  */
 export async function askAgent(
   systemPrompt: string,
   history: ChatMessage[],
   context: AgentContext
 ): Promise<string> {
-  const messages: Anthropic.MessageParam[] = history.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
+  const messages: any[] = [
+    { role: "system", content: systemPrompt },
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+  ];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await anthropic.messages.create({
-      model: env.ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      system: systemPrompt,
+    const response = await openai.chat.completions.create({
+      model: env.OPENAI_MODEL,
       messages,
-      tools: taskTools as Anthropic.Tool[],
+      tools: openaiTools,
     });
 
-    if (response.stop_reason !== "tool_use") {
-      return response.content
-        .filter((block): block is Anthropic.TextBlock => block.type === "text")
-        .map((block) => block.text)
-        .join("\n")
-        .trim();
+    const message = response.choices[0].message;
+
+    if (!message.tool_calls || message.tool_calls.length === 0) {
+      return (message.content || "").trim();
     }
 
-    messages.push({ role: "assistant", content: response.content });
+    messages.push({
+      role: "assistant",
+      content: message.content,
+      tool_calls: message.tool_calls,
+    });
 
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const block of response.content) {
-      if (block.type !== "tool_use") continue;
+    for (const toolCall of message.tool_calls) {
+      const args = toolCall.function.arguments
+        ? JSON.parse(toolCall.function.arguments)
+        : {};
       const result = await executeTaskTool(
-        block.name,
-        block.input,
+        toolCall.function.name,
+        args,
         context.workspaceId,
         context.agentKey
       );
-      toolResults.push({
-        type: "tool_result",
-        tool_use_id: block.id,
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
         content: JSON.stringify(result),
       });
     }
-
-    messages.push({ role: "user", content: toolResults });
   }
 
   return "Не получилось довести ответ до конца за разумное число шагов — попробуй переформулировать запрос.";
