@@ -1,8 +1,13 @@
 // Верстак — бэкенд P0.
 // Схема сознательно минимальна: только то, что нужно для фундамента
 // (Workspace, User, связь, авторизация через Telegram).
-// Модели задач/продаж/производства/агентов добавляются отдельными миграциями,
+// Модели задач/продаж/производства добавляются отдельными миграциями,
 // когда до них дойдёт очередь — здесь не нужно "угадывать" их заранее.
+//
+// Исключение: AgentMessage — первая модель общего интерфейса верстака —
+// переписка пользователя с каждым ИИ-агентом (Дизайнер/Финансист/Юрист/Маркетолог).
+// Конкретные роли/инструкции агентов пока живут в коде (src/agents.ts),
+// не в базе — настраивать их будем отдельным шагом.
 
 generator client {
   provider = "prisma-client-js"
@@ -32,8 +37,8 @@ model Workspace {
 }
 
 // Пользователь = человек, авторизовавшийся через Telegram.
-// В пилоте один пользователь состоит в одном воркспейсе (upgrade до
-// многих воркспейсов на пользователя — отдельная задача, не сейчас).
+// В пилоте один пользователь состоит в одном воркспейсе (upgrade до многих
+// воркспейсов на пользователя — отдельная задача, не сейчас).
 model User {
   id         String        @id @default(cuid())
   telegramId BigInt        @unique
@@ -45,10 +50,30 @@ model User {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   lastSeenAt DateTime @default(now())
+
+  agentMessages AgentMessage[]
 
   @@index([workspaceId])
   @@map("users")
+}
+
+// Одно сообщение в переписке пользователя с одним из ИИ-агентов верстака.
+// agentKey — строковый ключ агента ("designer" | "financier" | "lawyer" | "marketer"),
+// описан в src/agents.ts. У каждого пользователя — один непрерывный чат
+// на каждого агента (без отдельных "тредов/сессий" пока).
+model AgentMessage {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  agentKey String
+  role     String // "user" | "assistant"
+  content  String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, agentKey, createdAt])
+  @@map("agent_messages")
 }
