@@ -1,0 +1,2461 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Верстак</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
+<style>
+  /* Верстак committed to one visual world deliberately — a dark neon
+     control-room, per the exact palette/mood the client pinned down —
+     so this stays single-theme rather than swapping light/dark. */
+  :root{
+    --bg:#0e0e10;
+    --surface:#1a1a1d;
+    --surface-2:#232327;
+    --border:rgba(255,255,255,.09);
+    --ink:#f4f3ef;
+    --ink-muted:#a19d93;
+    --ink-faint:#66635c;
+    --accent:#ff6a2c;
+    --accent-ink:#2b0d02;
+    --accent-soft:rgba(255,106,44,.18);
+    --ok:#2fe7c9;
+    --ok-ink:#062420;
+    --ok-soft:rgba(47,231,201,.16);
+    --warn:var(--accent);
+    --warn-ink:var(--accent-ink);
+    --warn-soft:var(--accent-soft);
+    --danger:#ff3b6b;
+    --danger-soft:rgba(255,59,107,.18);
+    --deco-pink:#e63f8f;
+    --term-bg:#0a0a0b;
+    --term-ink:#f2f1ec;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 20px 50px -20px rgba(0,0,0,.65);
+    --r-lg: 24px;
+    --r-md: 18px;
+    --r-sm: 12px;
+    --r-pill: 999px;
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; }
+  .bg-fx{ position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+  .bg-fx .blob{ position:absolute; border-radius:50%; filter:blur(90px); }
+  .bg-fx .blob-lime{ width:560px; height:560px; background:var(--accent); opacity:.20; bottom:-220px; left:10%; }
+  .bg-fx .blob-warn{ width:460px; height:460px; background:var(--deco-pink); opacity:.13; top:-140px; right:-120px; }
+  .bg-fx .blob-ok{ width:520px; height:520px; background:var(--ok); opacity:.10; top:-160px; left:-160px; }
+  .bg-fx .grain{ position:absolute; inset:-50%; width:200%; height:200%; opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+  #app{ position:relative; z-index:1; }
+  body{ background:var(--bg); color:var(--ink); font-family:'Manrope', system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,.display{ font-family:'Sora', system-ui, sans-serif; }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, monospace; }
+  svg.feather{ width:15px; height:15px; stroke-width:2; vertical-align:-3px; }
+
+  #app{ max-width:1180px; margin:0 0 0 208px; padding:calc(28px + env(safe-area-inset-top)) 24px 100px; }
+
+  /* ---- black fill behind a phone's status bar / notch, so content never sits under it ---- */
+  .safe-top-fill{ position:fixed; top:0; left:0; right:0; height:env(safe-area-inset-top); background:#000; z-index:100; pointer-events:none; }
+
+  /* ---- persistent left rail: switches modules, stays on screen no matter how far you scroll ---- */
+  .nav-rail{ position:fixed; top:0; left:0; bottom:0; width:208px; background:var(--surface); border-right:1px solid var(--border); z-index:40; display:flex; flex-direction:column; padding:calc(22px + env(safe-area-inset-top)) 12px 22px; gap:2px; overflow-y:auto; }
+  .nav-brand{ display:flex; align-items:center; gap:9px; padding:2px 10px 20px; font-family:'Sora'; font-weight:700; font-size:15px; }
+  .nav-brand i{ color:var(--accent); }
+  .nav-item{ appearance:none; border:1px solid transparent; background:transparent; color:var(--ink-muted); padding:10px 12px; border-radius:var(--r-sm); font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:10px; width:100%; text-align:left; font-family:'Manrope'; }
+  .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
+  .nav-item.active{ background:var(--accent-soft); color:var(--accent); }
+  .nav-item .nav-label{ flex:1; }
+  .nav-item .badge{ font-family:'JetBrains Mono'; font-size:10.5px; color:var(--ink-faint); }
+  .nav-item.active .badge{ color:var(--accent); }
+  .nav-more-btn{ display:none; }
+  .nav-more-sheet, .nav-more-backdrop{ display:none; }
+
+  .topbar{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding-bottom:22px; margin-bottom:24px; border-bottom:1px solid var(--border); }
+  .brand-eyebrow{ font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:7px; display:flex; align-items:center; gap:6px; }
+  h1{ margin:0; font-size:30px; font-weight:700; letter-spacing:-.01em; text-wrap:balance; }
+  .sub{ color:var(--ink-muted); font-size:14px; margin-top:5px; max-width:54ch; line-height:1.5; }
+  .top-actions{ display:flex; gap:10px; flex-shrink:0; }
+
+  button{ font-family:inherit; cursor:pointer; }
+  .btn{ appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--ink); padding:10px 16px; border-radius:var(--r-pill); font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:7px; transition:border-color .12s, background .12s, transform .08s; }
+  .btn:hover{ border-color:var(--ink-faint); }
+  .btn:active{ transform:scale(.97); }
+  .btn:disabled{ opacity:.5; cursor:default; transform:none; }
+  .btn-accent{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .btn-accent:hover{ filter:brightness(1.05); border-color:var(--accent); }
+  .btn-ghost{ background:transparent; border-color:transparent; color:var(--ink-muted); padding:7px 9px; border-radius:var(--r-sm); }
+  .btn-ghost:hover{ background:var(--surface-2); color:var(--ink); border-color:transparent; }
+  .btn-icon{ width:32px; height:32px; padding:0; justify-content:center; border-radius:var(--r-pill); }
+  .btn-sm{ padding:7px 12px; font-size:12.5px; }
+
+  .layout{ display:grid; grid-template-columns:230px 1fr; gap:26px; align-items:start; }
+  @media (max-width: 820px){ .layout{ grid-template-columns:1fr; } .sidebar{ order:2; } }
+
+  .sidebar{ position:sticky; top:20px; display:flex; flex-direction:column; gap:22px; }
+  .search-box{ position:relative; }
+  .search-box svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-faint); width:14px; height:14px; pointer-events:none; }
+  .search-box input{ width:100%; padding:10px 12px 10px 34px; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:var(--r-pill); font-size:13.5px; font-family:'Manrope'; outline:none; min-height:40px; }
+  .search-box input:focus{ border-color:var(--accent); }
+  .search-box .search-clear{ position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--ink-faint); width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .search-box .search-clear:hover{ background:var(--surface-2); color:var(--ink); }
+  .chip-stale{ color:var(--accent); background:var(--accent-soft); }
+  .filter-group h3{ font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 10px; font-weight:600; }
+  .filter-list{ display:flex; flex-direction:column; gap:3px; }
+  .filter-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; border-radius:var(--r-pill); font-size:13.5px; color:var(--ink-muted); border:1px solid transparent; text-align:left; background:transparent; width:100%; font-family:'Manrope'; }
+  .filter-item:hover{ background:var(--surface-2); color:var(--ink); }
+  .filter-item.active{ background:var(--surface); border-color:var(--border); color:var(--ink); font-weight:700; box-shadow:var(--shadow); }
+  .filter-item .count{ font-family:'JetBrains Mono'; font-size:11px; color:var(--ink-faint); }
+  .filter-item.active .count{ color:var(--accent); }
+  .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; display:inline-block; margin-right:8px; }
+
+  .info-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:16px; box-shadow:var(--shadow); }
+  .info-card h3{ margin:0 0 6px; font-size:13.5px; display:flex; align-items:center; gap:6px; }
+  .info-card p{ margin:0; font-size:12.5px; color:var(--ink-muted); line-height:1.55; }
+  .info-card p + p{ margin-top:8px; }
+
+  .main{ min-width:0; }
+  .stat-row{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:22px; }
+  @media (max-width:640px){ .stat-row{ grid-template-columns:1fr 1fr; } }
+  .stat-tile{ border-radius:var(--r-lg); padding:18px 20px; display:flex; flex-direction:column; gap:16px; }
+  .stat-lime{ background:var(--accent); color:var(--accent-ink); }
+  .stat-warn{ background:var(--warn); color:var(--warn-ink); }
+  .stat-ok{ background:var(--ok); color:var(--ok-ink); }
+  .stat-badge{ width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,.24); display:flex; align-items:center; justify-content:center; }
+  .stat-badge svg{ width:16px; height:16px; stroke:rgba(255,255,255,.92); }
+  .stat-num{ font-family:'Sora'; font-size:25px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1; }
+  .stat-lbl{ font-size:12.5px; font-weight:600; opacity:.82; margin-top:4px; }
+  .addbar{ display:flex; margin-bottom:22px; }
+  .addbar .btn{ padding:12px 20px; font-size:14px; }
+
+  .group{ margin-bottom:28px; }
+  .group-title{ display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:600; margin-bottom:10px; }
+  .group-title .line{ flex:1; height:1px; background:var(--border); }
+
+  .task-list{ display:flex; flex-direction:column; gap:8px; }
+  .task{ display:grid; grid-template-columns:auto 1fr auto; align-items:start; gap:14px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); transition:border-color .12s; }
+  .task:hover{ border-color:var(--ink-faint); }
+  .task-check{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-faint); background:var(--surface); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .task-check:hover{ border-color:var(--ok); }
+  .task.done{ opacity:.68; }
+  .task.done .task-check{ background:var(--ok); border-color:var(--ok); color:var(--ok-ink); }
+  .task-check svg{ width:12px; height:12px; display:none; stroke-width:3; }
+  .task.done .task-check svg{ display:block; }
+
+  .task-title{ font-size:14.5px; font-weight:600; line-height:1.4; cursor:pointer; }
+  .task.done .task-title{ color:var(--ink-faint); text-decoration:line-through; }
+  .task-notes{ font-size:12.5px; color:var(--ink-muted); margin-top:4px; line-height:1.5; max-width:62ch; }
+  .task-checklist-progress{ font-family:'JetBrains Mono'; font-size:11px; color:var(--ink-muted); }
+  .task-meta{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center; }
+
+  .chip{ font-family:'JetBrains Mono'; font-size:10.5px; font-weight:600; letter-spacing:.02em; padding:4px 10px; border-radius:var(--r-pill); display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .chip svg{ width:11px; height:11px; }
+  .chip-project{ background:var(--surface-2); color:var(--ink-muted); border:1px solid var(--border); }
+  .chip-lever-sales{ background:var(--accent); color:var(--accent-ink); }
+  .chip-lever-ops{ background:var(--warn); color:var(--warn-ink); }
+  .chip-lever-scale{ background:var(--ok); color:var(--ok-ink); }
+  .chip-due{ color:var(--ink-faint); background:var(--surface-2); }
+  .chip-due.overdue{ color:var(--danger); background:var(--danger-soft); }
+  .chip-due.today{ color:var(--accent); background:var(--accent-soft); }
+  .chip-project{ font-weight:600; }
+  .chip-checklist{ background:var(--surface-2); color:var(--ink-muted); border:1px solid var(--border); }
+
+  .task-actions{ display:flex; gap:2px; flex-shrink:0; }
+
+  .empty{ padding:48px 20px; text-align:center; color:var(--ink-muted); font-size:13.5px; border:1.5px dashed rgba(255,255,255,.16); border-radius:var(--r-md); }
+
+  /* ---- modal overlays (shared look) ---- */
+  .overlay{ position:fixed; inset:0; background:rgba(20,15,10,.45); display:flex; align-items:flex-start; justify-content:center; padding:8vh 16px; z-index:60; backdrop-filter: blur(2px); }
+  .overlay[hidden]{ display:none; }
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); max-width:560px; width:100%; box-shadow:0 24px 70px -20px rgba(0,0,0,.45); max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
+  .panel-lg{ max-width:660px; max-height:90vh; }
+  .view-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+  .view-section{ margin-bottom:20px; }
+  .view-section h4{ margin:0 0 9px; font-size:12px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.05em; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:6px; }
+  .view-desc{ font-size:14px; line-height:1.65; color:var(--ink); white-space:pre-wrap; }
+  .view-checklist{ display:flex; flex-direction:column; gap:8px; }
+  .view-checklist .task-check{ width:20px; height:20px; }
+  .view-cl-row{ display:flex; align-items:center; gap:10px; font-size:13.5px; }
+  .view-cl-row.done span{ color:var(--ink-faint); text-decoration:line-through; }
+  .view-cl-row.done .task-check{ background:var(--ok); border-color:var(--ok); color:var(--ok-ink); }
+  .view-cl-row.done .task-check svg{ display:block; }
+  .view-link{ display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--accent); text-decoration:none; padding:7px 0; }
+  .view-link:hover{ text-decoration:underline; }
+  .view-empty{ font-size:13px; color:var(--ink-faint); }
+
+  /* ---- task workspace (task essence + persistent chat) ---- */
+  .workspace-panel{ max-width:1040px; width:94vw; height:88vh; max-height:88vh; }
+  .workspace-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .wh-eyebrow{ font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); display:block; margin-bottom:3px; }
+  .workspace-head h2{ margin:0; font-size:17px; max-width:56ch; text-wrap:balance; }
+  .wh-actions{ display:flex; gap:8px; align-items:center; flex-shrink:0; }
+  .workspace-body{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:20px; min-height:0; padding:20px; background:var(--surface); }
+  @media (max-width:760px){ .workspace-body{ grid-template-columns:1fr; grid-template-rows:auto 1fr; gap:14px; padding:14px; } .ws-col-task{ max-height:34vh; } }
+  .ws-col-task{ padding:0 2px 0 0; overflow-y:auto; }
+  .ws-col-chat{ display:flex; flex-direction:column; background:var(--term-bg); color:var(--term-ink); min-height:0; border-radius:var(--r-md); overflow:hidden; box-shadow:0 14px 34px -16px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05); }
+  .ws-chat-body{ flex:1; overflow-y:auto; padding:16px; font-family:'JetBrains Mono'; font-size:12.5px; line-height:1.6; display:flex; flex-direction:column; gap:12px; }
+  .ws-chat-head{ display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.08); font-family:'JetBrains Mono'; font-size:11.5px; color:#c9bda6; flex-shrink:0; }
+  .ws-chat-head .dots{ display:flex; gap:6px; }
+  .ws-chat-head .dots span{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .ws-chat-head .dots span:nth-child(1){ background:#e2685a; }
+  .ws-chat-head .dots span:nth-child(2){ background:#e0a53f; }
+  .ws-chat-head .dots span:nth-child(3){ background:#5cbf90; }
+  .ws-chat-foot{ border-top:1px solid rgba(255,255,255,.08); padding:10px 12px; display:flex; gap:8px; align-items:flex-end; flex-shrink:0; }
+  .ws-chat-foot textarea{ flex:1; background:transparent; border:none; outline:none; color:#f2e9db; font-family:'JetBrains Mono'; font-size:12.5px; resize:none; max-height:90px; padding:8px; }
+  .ws-chat-foot .btn{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .ws-kickoff{ display:flex; flex-direction:column; align-items:flex-start; gap:12px; padding:8px 0; }
+  .ws-kickoff p{ color:#8f8672; font-size:12.5px; line-height:1.7; margin:0; max-width:44ch; }
+  .ws-kickoff .btn{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .ws-loading{ color:#8f8672; font-size:12.5px; font-style:italic; }
+  .panel-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid var(--border); }
+  .panel-head h2{ margin:0; font-size:16px; display:flex; align-items:center; gap:8px; }
+  .panel-head p{ margin:3px 0 0; font-size:12.5px; color:var(--ink-muted); }
+  .panel-body{ padding:18px 20px; overflow-y:auto; font-size:13.5px; line-height:1.65; }
+  #panelBody{ white-space:pre-wrap; }
+  .panel-body.thinking{ color:var(--ink-faint); font-style:italic; }
+  .panel-foot{ padding:14px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+  /* ---- task editor form: sized for a thumb, not a mouse ---- */
+  .field{ margin-bottom:20px; }
+  .field label{ display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:9px; font-family:'JetBrains Mono'; }
+  .field input[type=text], .field textarea, .field input[type=date], .field input[type=time]{
+    width:100%; border:1px solid var(--border); background:var(--bg); color:var(--ink); border-radius:var(--r-sm);
+    padding:13px 14px; font-size:16px; font-family:'Manrope'; outline:none; min-height:48px;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{ border-color:var(--accent); }
+  .field textarea{ resize:vertical; min-height:130px; line-height:1.5; }
+  .field-hint{ font-size:12px; color:var(--ink-faint); margin-top:8px; line-height:1.5; }
+
+  .link-row, .file-row{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+  .link-row input[type=text]{ padding:12px 13px; font-size:15.5px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--bg); color:var(--ink); min-height:46px; min-width:0; }
+  .link-row .lbl{ flex:0 0 38%; }
+  .link-row .url{ flex:1; }
+  .file-row{ padding:11px 13px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--bg); }
+  .file-row .fi-icon{ color:var(--ink-muted); flex-shrink:0; }
+  .file-row .fi-name{ flex:1; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file-row .fi-size{ font-family:'JetBrains Mono'; font-size:11.5px; color:var(--ink-faint); flex-shrink:0; }
+  .file-row img.fi-thumb{ width:34px; height:34px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+  .add-row{ display:flex; gap:9px; }
+  .add-row input{ flex:1; }
+  .attach-btns{ display:flex; gap:8px; margin-top:2px; }
+  .attach-btns .btn{ min-height:44px; padding:10px 16px; font-size:13.5px; }
+  .chip-link{ background:var(--surface-2); color:var(--ink-muted); border:1px solid var(--border); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end; }
+  .seg{ display:flex; gap:8px; flex-wrap:wrap; }
+  .seg button{ border:1px solid var(--border); background:var(--surface); color:var(--ink-muted); padding:11px 16px; border-radius:var(--r-pill); font-size:13.5px; font-weight:600; min-height:44px; }
+  .seg button.active{ background:var(--ink); color:var(--surface); border-color:var(--ink); }
+  .seg button.active[data-lever=sales]{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .seg button.active[data-lever=ops]{ background:var(--warn); border-color:var(--warn); color:var(--warn-ink); }
+  .seg button.active[data-lever=scale]{ background:var(--ok); border-color:var(--ok); color:var(--ok-ink); }
+
+  .checklist-items{ display:flex; flex-direction:column; gap:9px; margin-bottom:10px; }
+  .checklist-row{ display:flex; align-items:center; gap:9px; }
+  .checklist-row input[type=text]{ flex:1; padding:12px 13px; font-size:15.5px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--bg); color:var(--ink); min-height:46px; min-width:0; }
+  .checklist-row input.cl-done{ text-decoration:line-through; color:var(--ink-faint); }
+  .cl-check{ width:28px; height:28px; flex-shrink:0; }
+  .checklist-add{ display:flex; gap:9px; }
+  .checklist-add input{ flex:1; }
+  .reminder-toggle{ display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--bg); min-height:48px; }
+  .reminder-toggle input{ width:19px; height:19px; accent-color:var(--accent); flex-shrink:0; }
+  .reminder-toggle span{ font-size:14px; color:var(--ink-muted); display:flex; align-items:center; gap:5px; }
+
+  /* ---- terminal chat ---- */
+  .chat-toggle{ position:fixed; right:22px; bottom:22px; z-index:55; padding:13px 20px 13px 16px; box-shadow:0 14px 34px -12px rgba(0,0,0,.35); }
+  .chat-toggle[hidden]{ display:none; }
+  .chat-drawer{ position:fixed; right:22px; bottom:22px; width:400px; max-width:92vw; height:min(560px, 78vh); background:var(--term-bg); color:var(--term-ink); border-radius:var(--r-lg); box-shadow:0 24px 70px -18px rgba(0,0,0,.55); z-index:56; display:flex; flex-direction:column; overflow:hidden; border:1px solid #000; }
+  .chat-drawer[hidden]{ display:none; }
+
+  /* ---- phones: full-screen sheet, bigger everything, no cramped grids ---- */
+  @media (max-width: 640px){
+    .overlay{ padding:0; align-items:stretch; }
+    .overlay .panel{ max-width:100%; width:100%; height:100dvh; max-height:100dvh; border-radius:0; }
+    .panel-head, .workspace-head{ padding:16px; }
+    .panel-body{ padding:16px 16px 28px; }
+    .panel-foot{ padding:14px 16px calc(14px + env(safe-area-inset-bottom)); flex-wrap:wrap; }
+    .panel-foot .btn{ flex:1 1 auto; justify-content:center; min-height:46px; }
+    .row2{ grid-template-columns:1fr; }
+    .row3{ grid-template-columns:1fr; }
+    .reminder-toggle{ justify-content:flex-start; }
+    .link-row{ flex-wrap:wrap; }
+    .link-row .lbl{ flex:1 1 100%; }
+    .link-row .url{ flex:1 1 100%; }
+    .link-row button{ margin-left:auto; }
+    .btn-icon{ width:40px; height:40px; }
+    .workspace-panel{ width:100vw; }
+    .ws-col-task{ padding:16px; }
+
+    /* ---- persistent nav becomes a bottom tab bar on a phone screen ---- */
+    .nav-rail{ top:auto; left:0; right:0; bottom:0; width:auto; height:auto; flex-direction:row; align-items:stretch;
+      border-right:none; border-top:1px solid var(--border); padding:4px 2px calc(4px + env(safe-area-inset-bottom)); gap:0; overflow:visible; z-index:50; justify-content:space-between; }
+    .nav-brand{ display:none; }
+    .nav-item{ flex-direction:column; gap:4px; padding:8px 6px; font-size:9.5px; flex:1 1 0; min-height:50px; justify-content:center; width:auto; text-align:center; }
+    .nav-item .nav-label{ flex:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .nav-item .badge{ position:absolute; margin-left:16px; margin-top:-6px; }
+    .nav-item{ position:relative; }
+    .nav-item.nav-item-secondary{ display:none; }
+    .nav-more-btn{ display:flex; }
+    .nav-more-sheet{ position:fixed; left:8px; right:8px; bottom:calc(66px + env(safe-area-inset-bottom)); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:0 -14px 40px -14px rgba(0,0,0,.35); z-index:51; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .nav-more-sheet .nav-item{ flex-direction:row; justify-content:flex-start; gap:10px; font-size:13px; min-height:46px; border-radius:var(--r-sm); text-align:left; }
+    .nav-more-sheet .nav-item .nav-label{ flex:1; white-space:normal; }
+    .nav-more-backdrop{ display:block; position:fixed; inset:0; z-index:49; background:transparent; }
+    .nav-more-sheet[hidden], .nav-more-backdrop[hidden]{ display:none; }
+
+    /* ---- main dashboard shell on a phone screen ---- */
+    #app{ margin-left:0; padding:calc(18px + env(safe-area-inset-top)) 14px 120px; }
+    .topbar{ flex-direction:column; align-items:stretch; gap:14px; padding-bottom:18px; margin-bottom:18px; }
+    h1{ font-size:23px; }
+    .sub{ max-width:none; }
+    .top-actions{ flex-wrap:wrap; gap:8px; }
+    .top-actions .btn{ flex:1 1 auto; justify-content:center; min-height:42px; }
+    .stat-row{ gap:10px; margin-bottom:18px; }
+    .stat-tile{ padding:14px 16px; gap:12px; }
+    .stat-num{ font-size:21px; }
+    .addbar .btn{ width:100%; justify-content:center; min-height:46px; }
+    .task{ padding:13px 12px; gap:10px; }
+    .task-check{ width:26px; height:26px; }
+    .task-check svg{ width:13px; height:13px; }
+    .task-title{ font-size:14px; }
+    .task-actions{ gap:0; }
+    .chip{ font-size:10px; padding:4px 9px; }
+    .chat-toggle{ right:14px; bottom:calc(78px + env(safe-area-inset-bottom)); }
+    .chat-drawer{ right:8px; left:8px; width:auto; max-width:none; bottom:calc(72px + env(safe-area-inset-bottom)); height:min(66vh, 560px); }
+    .filter-item{ padding:10px 12px; min-height:40px; }
+  }
+  .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .chat-head .dots{ display:flex; gap:6px; }
+  .chat-head .dots span{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .chat-head .dots span:nth-child(1){ background:#e2685a; }
+  .chat-head .dots span:nth-child(2){ background:#e0a53f; }
+  .chat-head .dots span:nth-child(3){ background:#5cbf90; }
+  .chat-head .title{ font-family:'JetBrains Mono'; font-size:12px; color:#c9bda6; display:flex; align-items:center; gap:7px; }
+  .chat-head button{ color:#c9bda6; background:transparent; border:none; }
+  .chat-head button:hover{ color:#fff; }
+  .chat-body{ flex:1; overflow-y:auto; padding:14px 16px; font-family:'JetBrains Mono'; font-size:12.5px; line-height:1.6; display:flex; flex-direction:column; gap:12px; }
+  .chat-line{ display:flex; gap:8px; }
+  .chat-line .who{ flex-shrink:0; color:var(--accent); }
+  .chat-line.assistant .who{ color:#7fc9a8; }
+  .chat-line .txt{ white-space:pre-wrap; color:#f2e9db; }
+  .chat-line.system .txt{ color:#8f8672; font-style:italic; }
+  .chat-line.thinking .txt{ color:#8f8672; }
+  .chat-foot{ border-top:1px solid rgba(255,255,255,.08); padding:10px 12px; display:flex; gap:8px; align-items:flex-end; }
+  .chat-foot textarea{ flex:1; background:transparent; border:none; outline:none; color:#f2e9db; font-family:'JetBrains Mono'; font-size:12.5px; resize:none; max-height:80px; padding:8px; }
+  .chat-foot .btn{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .chat-empty{ color:#8f8672; font-size:12.5px; line-height:1.6; }
+  .chat-empty b{ color:#c9bda6; }
+
+  /* ---- toast: surfaces save/sync failures instead of failing silently ---- */
+  .toast-stack{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:80; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; width:100%; padding:0 16px; }
+  .toast{ background:var(--surface); border:1px solid var(--border); color:var(--ink); padding:12px 16px; border-radius:var(--r-sm); font-size:13px; box-shadow:0 14px 34px -12px rgba(0,0,0,.5); display:flex; align-items:center; gap:9px; max-width:420px; pointer-events:auto; animation:toast-in .18s ease-out; }
+  .toast.err{ border-color:var(--danger); }
+  .toast.err svg{ color:var(--danger); flex-shrink:0; }
+  .toast .toast-action{ background:transparent; border:none; color:var(--accent); font-weight:700; font-size:13px; padding:2px 4px; flex-shrink:0; }
+  .toast .toast-action:hover{ text-decoration:underline; }
+  @keyframes toast-in{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+
+  /* ---- module page header (title/intro shown at the top of each module's content) ---- */
+  .module-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; }
+  .module-head h2{ margin:0; font-size:20px; }
+  .module-head p{ margin:3px 0 0; color:var(--ink-muted); font-size:13px; }
+  .module-stat-row{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:20px; }
+  @media (max-width:640px){ .module-stat-row{ grid-template-columns:1fr 1fr; } }
+
+  /* ---- status / stage chips shared by module records ---- */
+  .chip-status-new{ background:var(--surface-2); color:var(--ink-muted); border:1px solid var(--border); }
+  .chip-status-in_progress{ background:var(--accent-soft); color:var(--accent); }
+  .chip-status-paid{ background:var(--ok-soft); color:var(--ok); }
+  .chip-status-overdue{ background:var(--danger-soft); color:var(--danger); }
+  .chip-stage-design{ background:var(--surface-2); color:var(--ink-muted); border:1px solid var(--border); }
+  .chip-stage-printing{ background:var(--accent-soft); color:var(--accent); }
+  .chip-stage-cutting{ background:rgba(90,79,196,.2); color:#a89dfa; }
+  .chip-stage-packaging{ background:var(--ok-soft); color:var(--ok); }
+  .chip-stage-done{ background:var(--ok); color:var(--ok-ink); }
+  .chip-income{ background:var(--ok-soft); color:var(--ok); }
+  .chip-expense{ background:var(--danger-soft); color:var(--danger); }
+  .chip-lowstock{ background:var(--danger-soft); color:var(--danger); }
+
+  .analytics-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:820px){ .analytics-grid{ grid-template-columns:1fr; } }
+  .analytics-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:18px 20px; box-shadow:var(--shadow); }
+  .analytics-card h3{ margin:0 0 12px; font-size:13.5px; display:flex; align-items:center; gap:7px; }
+  .analytics-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .analytics-row:last-child{ border-bottom:none; }
+  .analytics-row .label{ color:var(--ink-muted); }
+  .analytics-row .value{ font-family:'JetBrains Mono'; font-weight:600; }
+  .module-empty-note{ font-size:12.5px; color:var(--ink-faint); margin-top:2px; }
+  .chip-abc-a{ background:var(--ok-soft); color:var(--ok); }
+  .chip-abc-b{ background:var(--accent-soft); color:var(--accent); }
+  .chip-abc-c{ background:var(--danger-soft); color:var(--danger); }
+
+  /* ---- kanban: Продажи / Производство ---- */
+  .kanban-board{ display:flex; gap:14px; overflow-x:auto; padding-bottom:6px; }
+  .kanban-col{ flex:1 1 240px; min-width:240px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .kanban-col-head{ display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:700; color:var(--ink-muted); padding:0 2px; }
+  .kanban-col-head .badge{ font-family:'JetBrains Mono'; font-size:11px; background:var(--surface-2); padding:2px 8px; border-radius:var(--r-pill); }
+  .kanban-col-body{ display:flex; flex-direction:column; gap:10px; min-height:40px; }
+  .kanban-empty{ font-size:12px; color:var(--ink-faint); text-align:center; padding:14px 0; border:1.5px dashed var(--border); border-radius:var(--r-sm); }
+  .kanban-card{ background:var(--bg); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .kanban-card-title{ font-size:13.5px; font-weight:700; cursor:pointer; line-height:1.3; }
+  .kanban-card-sub{ font-size:12px; color:var(--ink-muted); margin-top:-4px; }
+  .kanban-card-meta{ display:flex; flex-wrap:wrap; gap:6px; }
+  .kanban-card-actions{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+  .kanban-btn{ font-size:11.5px; padding:7px 11px; }
+  .kanban-card-tools{ display:flex; justify-content:flex-end; gap:2px; border-top:1px solid var(--border); padding-top:6px; margin-top:2px; }
+  @media (max-width:760px){ .kanban-board{ flex-direction:column; } .kanban-col{ min-width:0; } }
+
+  /* ---- документы: подвкладки ---- */
+  .doc-subtabs{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  .doc-subtab{ appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--ink-muted); padding:9px 14px; border-radius:var(--r-pill); font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:7px; font-family:'Manrope'; }
+  .doc-subtab .badge{ font-family:'JetBrains Mono'; font-size:10.5px; color:var(--ink-faint); }
+  .doc-subtab.active{ background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  .doc-subtab.active .badge{ color:var(--accent); }
+  .doc-subtab-intro{ color:var(--ink-muted); font-size:13px; margin:0 0 16px; }
+
+
+  /* ---- дашборд: встроенный чат с Клодом ---- */
+  .dash-chat-head-row{ margin:4px 0 10px; }
+  .dash-chat-head-row h3{ margin:0 0 3px; font-size:14px; display:flex; align-items:center; gap:7px; }
+  .dash-chat-head-row p{ margin:0; color:var(--ink-muted); font-size:12.5px; }
+  .dash-chat-slot{ min-height:1px; }
+  .dash-chat-panel{ background:var(--term-bg); color:var(--term-ink); border-radius:var(--r-lg); box-shadow:var(--shadow); border:1px solid #000; overflow:hidden; display:flex; flex-direction:column; height:420px; }
+</style>
+
+<div class="safe-top-fill" aria-hidden="true"></div>
+<div class="bg-fx" aria-hidden="true">
+  <span class="blob blob-lime"></span>
+  <span class="blob blob-warn"></span>
+  <span class="blob blob-ok"></span>
+  <span class="grain"></span>
+</div>
+<nav class="nav-rail" id="navRail"></nav>
+<div class="nav-more-backdrop" id="navMoreBackdrop" data-action="close-nav-more" hidden></div>
+<div class="nav-more-sheet" id="navMoreSheet" hidden></div>
+<div id="app"></div>
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2 id="panelTitle"></h2>
+        <p id="panelSub"></p>
+      </div>
+      <button class="btn-ghost btn btn-icon" id="panelClose" aria-label="Закрыть"><i data-feather="x"></i></button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-foot">
+      <button class="btn btn-sm" id="panelStop" hidden>Остановить</button>
+      <button class="btn btn-accent btn-sm" id="panelAsk" hidden>Спросить ещё раз</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="taskOverlay" hidden>
+  <div class="panel panel-lg">
+    <div class="panel-head">
+      <div>
+        <h2 id="taskModalTitle">Новая задача</h2>
+        <p>Заполните — можно кратко, детали дописать потом</p>
+      </div>
+      <button class="btn-ghost btn btn-icon" id="taskModalClose" aria-label="Закрыть"><i data-feather="x"></i></button>
+    </div>
+    <div class="panel-body" style="padding-bottom:4px">
+      <div class="field">
+        <label><i data-feather="edit-3"></i> Название</label>
+        <input type="text" id="tf-title" placeholder="Например: позвонить клиенту по заказу №42" />
+      </div>
+      <div class="field">
+        <label><i data-feather="align-left"></i> Описание</label>
+        <textarea id="tf-notes" placeholder="Детали, контекст, ссылки…"></textarea>
+      </div>
+      <div class="field">
+        <label><i data-feather="folder"></i> Проект</label>
+        <div class="seg" id="tf-project"></div>
+      </div>
+      <div class="field">
+        <label><i data-feather="trending-up"></i> Рычаг роста</label>
+        <div class="seg" id="tf-lever"></div>
+      </div>
+      <div class="row3 field">
+        <div>
+          <label><i data-feather="calendar"></i> Срок</label>
+          <input type="date" id="tf-due" />
+        </div>
+        <div>
+          <label><i data-feather="clock"></i> Время</label>
+          <input type="time" id="tf-time" />
+        </div>
+        <label class="reminder-toggle" style="margin-bottom:0">
+          <input type="checkbox" id="tf-reminder" />
+          <span><i data-feather="bell"></i> Напомнить</span>
+        </label>
+      </div>
+      <div class="field">
+        <label><i data-feather="check-square"></i> Чек-лист</label>
+        <div class="checklist-items" id="tf-checklist"></div>
+        <div class="checklist-add">
+          <input type="text" id="tf-checklist-input" placeholder="Добавить пункт и нажать Enter" />
+          <button class="btn btn-ghost btn-icon" id="tf-checklist-add" aria-label="Добавить пункт"><i data-feather="plus"></i></button>
+        </div>
+      </div>
+      <div class="field">
+        <label><i data-feather="link-2"></i> Ссылки</label>
+        <div id="tf-links"></div>
+        <div class="link-row">
+          <input type="text" id="tf-link-label" class="lbl" placeholder="Название" />
+          <input type="text" id="tf-link-url" class="url" placeholder="https://…" />
+          <button type="button" class="btn btn-ghost btn-icon" id="tf-link-add" aria-label="Добавить ссылку"><i data-feather="plus"></i></button>
+        </div>
+      </div>
+      <div class="field">
+        <label><i data-feather="paperclip"></i> Файлы</label>
+        <div id="tf-files"></div>
+        <div class="attach-btns">
+          <button type="button" class="btn btn-accent btn-sm" id="tf-file-pick"><i data-feather="upload"></i> Прикрепить фото или файл</button>
+          <input type="file" id="tf-file-input" accept="image/*,.pdf,.doc,.docx,.txt,.xlsx" multiple hidden />
+        </div>
+        <div class="field-hint" id="tf-file-hint">Фото сжимаются автоматически при добавлении — можно смело кидать снимок с телефона.</div>
+      </div>
+    </div>
+    <div class="panel-foot">
+      <button class="btn btn-sm" id="tf-delete" style="margin-right:auto; color:var(--danger); display:none">Удалить задачу</button>
+      <button class="btn btn-sm" id="tf-cancel">Отмена</button>
+      <button class="btn btn-accent btn-sm" id="tf-save"><i data-feather="check"></i> Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="recordOverlay" hidden>
+  <div class="panel panel-lg">
+    <div class="panel-head">
+      <div>
+        <h2 id="recordModalTitle">Новая запись</h2>
+        <p id="recordModalSub">Заполните — можно кратко, детали дописать потом</p>
+      </div>
+      <button class="btn-ghost btn btn-icon" id="recordModalClose" aria-label="Закрыть"><i data-feather="x"></i></button>
+    </div>
+    <div class="panel-body" id="recordFields" style="padding-bottom:4px"></div>
+    <div class="panel-foot">
+      <button class="btn btn-sm" id="record-delete" style="margin-right:auto; color:var(--danger); display:none">Удалить</button>
+      <button class="btn btn-sm" id="record-cancel">Отмена</button>
+      <button class="btn btn-accent btn-sm" id="record-save"><i data-feather="check"></i> Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="viewOverlay" hidden>
+  <div class="panel workspace-panel">
+    <div class="workspace-head">
+      <div>
+        <span class="wh-eyebrow" id="wsEyebrow"></span>
+        <h2 id="wsTitle"></h2>
+      </div>
+      <div class="wh-actions">
+        <button class="btn btn-sm" id="ws-edit"><i data-feather="edit-3"></i> Редактировать</button>
+        <button class="btn-ghost btn btn-icon" id="wsClose" aria-label="Закрыть"><i data-feather="x"></i></button>
+      </div>
+    </div>
+    <div class="workspace-body">
+      <div class="ws-col-task" id="wsTaskCol"></div>
+      <div class="ws-col-chat">
+        <div class="ws-chat-head"><span class="dots"><span></span><span></span><span></span></span><span><i data-feather="terminal"></i> клод@задача</span></div>
+        <div class="ws-chat-body" id="wsChatBody"></div>
+        <div class="ws-chat-foot">
+          <textarea id="wsChatInput" rows="1" placeholder="Спросите совета или напишите «приступай»…"></textarea>
+          <button class="btn btn-icon" id="wsChatSend" aria-label="Отправить"><i data-feather="arrow-up"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="btn btn-accent chat-toggle" id="chatToggle"><i data-feather="terminal"></i> Клод</button>
+<div class="chat-drawer" id="chatDrawer" hidden>
+  <div class="chat-head">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="title"><i data-feather="terminal"></i> клод@верстак</div>
+    <button class="btn-icon" id="chatClose" aria-label="Свернуть"><i data-feather="minus"></i></button>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-foot">
+    <textarea id="chatInput" rows="1" placeholder="Опишите задачу или спросите совета…"></textarea>
+    <button class="btn btn-icon" id="chatSend" aria-label="Отправить"><i data-feather="arrow-up"></i></button>
+  </div>
+</div>
+
+<div class="dash-chat-panel" id="dashChatPanel">
+  <div class="chat-head">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="title"><i data-feather="terminal"></i> клод@дашборд</div>
+  </div>
+  <div class="chat-body" id="dashChatBody"></div>
+  <div class="chat-foot">
+    <textarea id="dashChatInput" rows="1" placeholder="Спросите про стратегию, узкие места, приоритеты…"></textarea>
+    <button class="btn btn-icon" id="dashChatSend" aria-label="Отправить"><i data-feather="arrow-up"></i></button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function refreshIcons(){ if(window.feather) window.feather.replace({ 'stroke-width': 2 }); }
+
+  var PROJECTS = {
+    metalizm:  { label: "METALIZM",  short: "METALIZM",  color: "#c1461f" },
+    printbar:  { label: "Принт Бар (выездные принты)", short: "Принт Бар", color: "#2f6f7d" },
+    sprintami: { label: "Спринтами (типография)", short: "Спринтами", color: "#5a4fc4" },
+    other:     { label: "Другие проекты", short: "Другое", color: "#6d675c" }
+  };
+  var LEVERS = {
+    sales: { label: "Продажи", cls: "chip-lever-sales" },
+    ops:   { label: "Операционка", cls: "chip-lever-ops" },
+    scale: { label: "Масштаб", cls: "chip-lever-scale" }
+  };
+
+  /* ============================================================
+     MODULE OS, упрощённый формат: Дашборд / Задачи / Продажи (канбан) /
+     Производство (канбан) / Выручка / Документы (договоры+регламенты+цели).
+     Один движок карточек+модалки поверх той же db-капабилити, что и задачи.
+     ============================================================ */
+  var SALES_STAGE = {
+    new_request:   { label: "Новая заявка",     cls: "chip-status-new" },
+    in_work:       { label: "В работе",         cls: "chip-stage-printing" },
+    to_production: { label: "Передано в цех",   cls: "chip-stage-done" }
+  };
+  var SALES_STAGE_ORDER = ["new_request","in_work","to_production"];
+  var PRODUCTION_STAGE = {
+    new_order:  { label: "Новый заказ",        cls: "chip-status-new" },
+    in_progress:{ label: "В работе",           cls: "chip-stage-printing" },
+    delivered:  { label: "Передано клиенту",   cls: "chip-stage-done" }
+  };
+  var PRODUCTION_STAGE_ORDER = ["new_order","in_progress","delivered"];
+  var KANBAN_DEFS = {
+    sales:      { map: SALES_STAGE,      order: SALES_STAGE_ORDER },
+    production: { map: PRODUCTION_STAGE, order: PRODUCTION_STAGE_ORDER }
+  };
+  var FINANCE_TYPE = {
+    income:  { label: "Приход", cls: "chip-income" },
+    expense: { label: "Расход", cls: "chip-expense" }
+  };
+  var GOAL_STATUS = {
+    active:   { label: "В работе",   cls: "chip-status-in_progress" },
+    achieved: { label: "Достигнута", cls: "chip-status-paid" },
+    paused:   { label: "На паузе",   cls: "chip-status-new" }
+  };
+  function projectOptions(){
+    return Object.keys(PROJECTS).map(function(k){ return { value:k, label: PROJECTS[k].short }; });
+  }
+  function optionsFromMap(map){
+    return Object.keys(map).map(function(k){ return { value:k, label: map[k].label }; });
+  }
+
+  var MODULE_DEFS = {
+    sales: {
+      label: "Продажи", icon: "trending-up", collection: "sales", recordNoun: "заявка",
+      fields: [
+        { key:"client", label:"Клиент", icon:"user", type:"text", required:true, placeholder:"Например: ИП Илмаров" },
+        { key:"title", label:"Что продаём", icon:"tag", type:"text", required:true, placeholder:"Портрет на металле, 40×60" },
+        { key:"project", label:"Направление", icon:"folder", type:"select", options:projectOptions(), fallback:"other" },
+        { key:"amount", label:"Сумма, ₽", icon:"credit-card", type:"number", placeholder:"0" },
+        { key:"stage", label:"Этап", icon:"activity", type:"select", options:optionsFromMap(SALES_STAGE), fallback:"new_request" },
+        { key:"due", label:"Срок", icon:"calendar", type:"date" },
+        { key:"notes", label:"Заметки", icon:"align-left", type:"textarea", placeholder:"Контекст, договорённости…" }
+      ]
+    },
+    production: {
+      label: "Производство", icon: "settings", collection: "production", recordNoun: "заказ",
+      fields: [
+        { key:"title", label:"Заказ", icon:"tag", type:"text", required:true, placeholder:"Например: 5 портретов, заказ ИП Илмарова" },
+        { key:"client", label:"Клиент", icon:"user", type:"text", placeholder:"Необязательно" },
+        { key:"project", label:"Направление", icon:"folder", type:"select", options:projectOptions(), fallback:"other" },
+        { key:"stage", label:"Этап", icon:"activity", type:"select", options:optionsFromMap(PRODUCTION_STAGE), fallback:"new_order" },
+        { key:"due", label:"Срок сдачи", icon:"calendar", type:"date" },
+        { key:"notes", label:"Заметки", icon:"align-left", type:"textarea" }
+      ]
+    },
+    finance: {
+      label: "Финансы", icon: "dollar-sign", collection: "finance", recordNoun: "операция",
+      fields: [
+        { key:"type", label:"Тип", icon:"activity", type:"select", options:optionsFromMap(FINANCE_TYPE), fallback:"income" },
+        { key:"amount", label:"Сумма, ₽", icon:"credit-card", type:"number", required:true, placeholder:"0" },
+        { key:"category", label:"Категория", icon:"tag", type:"text", placeholder:"Оплата клиента / материалы / аренда…" },
+        { key:"project", label:"Направление", icon:"folder", type:"select", options:projectOptions(), fallback:"other" },
+        { key:"date", label:"Дата", icon:"calendar", type:"date" },
+        { key:"notes", label:"Комментарий", icon:"align-left", type:"textarea" }
+      ]
+    },
+    documents: {
+      label: "Договоры", icon: "file-text", collection: "documents", recordNoun: "документ",
+      fields: [
+        { key:"title", label:"Название", icon:"file-text", type:"text", required:true, placeholder:"Договор аренды Седова 24" },
+        { key:"category", label:"Категория", icon:"tag", type:"text", placeholder:"Договор / счёт / инструкция…" },
+        { key:"url", label:"Ссылка", icon:"link-2", type:"text", placeholder:"https://…" },
+        { key:"notes", label:"Заметки", icon:"align-left", type:"textarea" }
+      ]
+    },
+    regulations: {
+      label: "Регламенты", icon: "book-open", collection: "regulations", recordNoun: "регламент",
+      fields: [
+        { key:"title", label:"Название регламента", icon:"book-open", type:"text", required:true, placeholder:"Как принимать заказ в работу" },
+        { key:"category", label:"Раздел", icon:"tag", type:"text", placeholder:"Продажи / производство / общее" },
+        { key:"body", label:"Текст регламента", icon:"align-left", type:"textarea", big:true, placeholder:"Шаги, ответственные, что делать в нештатной ситуации…" }
+      ]
+    },
+    goals: {
+      label: "Цели компании", icon: "flag", collection: "goals", recordNoun: "цель",
+      fields: [
+        { key:"title", label:"Цель", icon:"flag", type:"text", required:true, placeholder:"Например: выйти на 300 000 ₽/мес по METALIZM" },
+        { key:"project", label:"Направление", icon:"folder", type:"select", options:projectOptions(), fallback:"other" },
+        { key:"metric", label:"Как измеряем", icon:"bar-chart-2", type:"text", placeholder:"Выручка / число заказов / клиентов…" },
+        { key:"due", label:"Срок", icon:"calendar", type:"date" },
+        { key:"status", label:"Статус", icon:"activity", type:"select", options:optionsFromMap(GOAL_STATUS), fallback:"active" },
+        { key:"notes", label:"Заметки", icon:"align-left", type:"textarea" }
+      ]
+    }
+  };
+  var MODULE_ORDER = ["dashboard","tasks","sales","production","revenue","documents"];
+  var MODULE_META = {
+    dashboard:  { label:"Дашборд",      icon:"layout" },
+    tasks:      { label:"Задачи",       icon:"check-square" },
+    sales:      { label:"Продажи",      icon:"trending-up" },
+    production: { label:"Производство", icon:"settings" },
+    revenue:    { label:"Выручка",      icon:"bar-chart-2" },
+    documents:  { label:"Документы",    icon:"file-text" }
+  };
+
+  var DOC_SUBTABS = [
+    { key:"documents",   label:"Договоры",       icon:"file-text" },
+    { key:"regulations", label:"Регламенты",     icon:"book-open" },
+    { key:"goals",       label:"Цели компании",  icon:"flag" }
+  ];
+
+  function uid(){ return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function cuid(){ return 'c' + Math.random().toString(36).slice(2,9); }
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+  function fmtDate(iso){ if(!iso) return ""; var d = new Date(iso+"T00:00:00"); return d.toLocaleDateString('ru-RU', {day:'numeric', month:'short'}); }
+  function dueClass(iso){ if(!iso) return ""; if(iso < todayISO()) return "overdue"; if(iso === todayISO()) return "today"; return ""; }
+  function dueLabel(t){
+    if(!t.due) return "без срока";
+    var iso = t.due, tt = todayISO(), timeSuffix = t.dueTime ? (', ' + t.dueTime) : '';
+    if(iso < tt) return "просрочено · " + fmtDate(iso);
+    if(iso === tt) return "сегодня" + timeSuffix;
+    var days = Math.round((new Date(iso+"T00:00:00") - new Date(tt+"T00:00:00"))/86400000);
+    if(days === 1) return "завтра" + timeSuffix;
+    if(days <= 7) return "через " + days + " дн · " + fmtDate(iso);
+    return fmtDate(iso) + timeSuffix;
+  }
+  function addDays(n){ var d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function checklistProgress(t){
+    if(!t.checklist || !t.checklist.length) return null;
+    var done = t.checklist.filter(function(c){ return c.done; }).length;
+    return done + '/' + t.checklist.length;
+  }
+  function fmtBytes(n){
+    if(n < 1024) return n + ' Б';
+    return Math.round(n/1024) + ' КБ';
+  }
+
+  var toastStack = document.getElementById('toastStack');
+  function showToast(text, isErr){
+    var el = document.createElement('div');
+    el.className = 'toast' + (isErr ? ' err' : '');
+    el.innerHTML = (isErr ? '<i data-feather="alert-triangle"></i>' : '<i data-feather="check-circle"></i>') + '<span>'+esc(text)+'</span>';
+    toastStack.appendChild(el);
+    refreshIcons();
+    setTimeout(function(){ el.remove(); }, isErr ? 7000 : 3200);
+  }
+  function showActionToast(text, actionLabel, onAction){
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = '<i data-feather="trash-2"></i><span>'+esc(text)+'</span><button type="button" class="toast-action">'+esc(actionLabel)+'</button>';
+    toastStack.appendChild(el);
+    refreshIcons();
+    var timer = setTimeout(function(){ el.remove(); }, 6000);
+    el.querySelector('.toast-action').addEventListener('click', function(){
+      clearTimeout(timer); el.remove(); onAction();
+    });
+  }
+
+  var state = { tasks:{}, projectFilter:'all', leverFilter:'all', showDone:false, search:'', module:'dashboard', navMoreOpen:false, docSubTab:'documents',
+    records: { sales:{}, production:{}, finance:{}, documents:{}, regulations:{}, goals:{} } };
+  var els = { app: document.getElementById('app'), navRail: document.getElementById('navRail'), navMoreSheet: document.getElementById('navMoreSheet'), navMoreBackdrop: document.getElementById('navMoreBackdrop') };
+  var dashChatPanelEl = document.getElementById('dashChatPanel'); // cached once — reparented into #dashChatSlot on every dashboard render, never recreated
+
+  /* ============ auth + REST plumbing (replaces window.claude.use('db')/('sample')) ============ */
+  var AUTH_TOKEN = null;
+  var tasksCol = null;
+  var recordCols = {}; // moduleKey -> {doc(id):{set,update,delete}} shim backed by /records/:module
+
+  function showFatalError(msg){
+    document.body.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413;">' +
+        '<div><p style="font-size:16px;font-weight:700;margin:0 0 8px;">Верстак недоступен</p>' +
+        '<p style="font-size:14px;color:#66655f;margin:0;">' + esc(msg) + '</p></div>' +
+      '</div>';
+  }
+
+  async function bootstrapAuth(){
+    var initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+    if(!initData){
+      showFatalError('Открой это приложение через Telegram-бота.');
+      return false;
+    }
+    try{
+      var res = await fetch('/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: initData })
+      });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      if(!data || !data.token) throw new Error('нет токена в ответе сервера');
+      AUTH_TOKEN = data.token;
+      return true;
+    }catch(e){
+      console.warn('auth error', e);
+      showFatalError('Не удалось войти через Telegram. Перезапустите бота и попробуйте снова.');
+      return false;
+    }
+  }
+
+  // Same-origin fetch helper: attaches the bearer token, JSON-encodes bodies, throws on non-2xx.
+  // Callers already show a toast on failure (saveTask/patchTask/removeTask/saveRecord/… all
+  // .catch(...) into showToast), so this stays a thin wrapper rather than toasting itself.
+  function apiFetch(path, opts){
+    opts = opts || {};
+    var headers = {};
+    if(AUTH_TOKEN) headers['Authorization'] = 'Bearer ' + AUTH_TOKEN;
+    var body = opts.body;
+    if(body !== undefined && body !== null){
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(body);
+    }
+    return fetch(path, { method: opts.method || 'GET', headers: headers, body: body, signal: opts.signal })
+      .then(function(res){
+        if(!res.ok){
+          return res.text().catch(function(){ return ''; }).then(function(t){
+            var err = new Error('HTTP ' + res.status + (t ? (': ' + t) : ''));
+            err.status = res.status;
+            throw err;
+          });
+        }
+        if(res.status === 204) return null;
+        return res.json().catch(function(){ return null; });
+      });
+  }
+
+  /* ---- task shape adapter: backend Task row (uppercase enums, dueDate/description/extra)
+     <-> local task shape used throughout this file (lowercase project/lever, due/notes,
+     dueTime/reminder/links/attachments as top-level fields). ---- */
+  function apiProjectToLocal(p){ return p ? String(p).toLowerCase() : 'other'; }
+  function localProjectToApi(p){ return (p || 'other').toUpperCase(); }
+  function apiLeverToLocal(l){ return l ? String(l).toLowerCase() : 'ops'; }
+  function localLeverToApi(l){ return (l || 'ops').toUpperCase(); }
+  function apiStatusToLocal(s){ return s === 'DONE' ? 'done' : 'open'; }
+  function localStatusToApi(s){ return s === 'done' ? 'DONE' : 'NEW'; }
+
+  function taskFromApi(row){
+    var extra = row.extra || {};
+    return {
+      id: row.id,
+      title: row.title || '',
+      notes: row.description || '',
+      project: apiProjectToLocal(row.project),
+      lever: apiLeverToLocal(row.lever),
+      status: apiStatusToLocal(row.status),
+      due: row.dueDate ? String(row.dueDate).slice(0,10) : null,
+      dueTime: extra.dueTime || '',
+      reminder: !!extra.reminder,
+      links: Array.isArray(extra.links) ? extra.links : [],
+      attachments: Array.isArray(extra.attachments) ? extra.attachments : [],
+      checklist: Array.isArray(row.checklist) ? row.checklist : [],
+      createdByAgentKey: row.createdByAgentKey || null,
+      createdAt: row.createdAt ? new Date(row.createdAt).getTime() : Date.now(),
+      updatedAt: row.updatedAt ? new Date(row.updatedAt).getTime() : undefined,
+      extra: extra // raw extra kept around so task.extra.chat can hold per-task chat history
+    };
+  }
+  function taskToApiBody(task){
+    return {
+      id: task.id,
+      title: task.title || '',
+      description: task.notes || '',
+      project: localProjectToApi(task.project),
+      lever: localLeverToApi(task.lever),
+      status: localStatusToApi(task.status),
+      dueDate: task.due || null,
+      checklist: task.checklist || [],
+      createdByAgentKey: task.createdByAgentKey || undefined,
+      extraPatch: {
+        dueTime: task.dueTime || '',
+        reminder: !!task.reminder,
+        links: task.links || [],
+        attachments: task.attachments || []
+      }
+    };
+  }
+  function taskPatchToApiBody(patch){
+    var body = {};
+    if('title' in patch) body.title = patch.title;
+    if('notes' in patch) body.description = patch.notes;
+    if('project' in patch) body.project = localProjectToApi(patch.project);
+    if('lever' in patch) body.lever = localLeverToApi(patch.lever);
+    if('status' in patch) body.status = localStatusToApi(patch.status);
+    if('due' in patch) body.dueDate = patch.due;
+    if('checklist' in patch) body.checklist = patch.checklist;
+    if('createdByAgentKey' in patch) body.createdByAgentKey = patch.createdByAgentKey;
+    var extraPatch = {}, hasExtra = false;
+    ['dueTime','reminder','links','attachments'].forEach(function(k){ if(k in patch){ extraPatch[k] = patch[k]; hasExtra = true; } });
+    if(patch.extraPatch){ Object.assign(extraPatch, patch.extraPatch); hasExtra = true; }
+    if(hasExtra) body.extraPatch = extraPatch;
+    return body;
+  }
+
+  // Shim exposing the same .doc(id).set/update/delete surface the old Firestore-like `db`
+  // capability gave saveTask/patchTask/removeTask, backed by real REST calls. No realtime
+  // listeners any more (single tab, no external writers), so each call also folds the
+  // server's canonical response back into local state and re-renders.
+  function makeTasksCol(){
+    return {
+      doc: function(id){
+        return {
+          set: function(task){
+            return apiFetch('/tasks', { method:'POST', body: taskToApiBody(task) }).then(function(res){
+              if(res && res.task){ state.tasks[id] = taskFromApi(res.task); render(); }
+            });
+          },
+          update: function(patch){
+            return apiFetch('/tasks/' + id, { method:'PATCH', body: taskPatchToApiBody(patch) }).then(function(res){
+              if(res && res.task){ state.tasks[id] = taskFromApi(res.task); render(); }
+            });
+          },
+          delete: function(){
+            return apiFetch('/tasks/' + id, { method:'DELETE' });
+          }
+        };
+      }
+    };
+  }
+  function makeRecordCol(moduleKey){
+    return {
+      doc: function(id){
+        return {
+          set: function(rec){
+            return apiFetch('/records/' + moduleKey, { method:'POST', body: rec }).then(function(res){
+              if(res && res.record){ state.records[moduleKey][id] = res.record; render(); }
+            });
+          },
+          update: function(patch){
+            return apiFetch('/records/' + moduleKey + '/' + id, { method:'PATCH', body: patch }).then(function(res){
+              if(res && res.record){ state.records[moduleKey][id] = res.record; render(); }
+            });
+          },
+          delete: function(){
+            return apiFetch('/records/' + moduleKey + '/' + id, { method:'DELETE' });
+          }
+        };
+      }
+    };
+  }
+
+  async function initApp(){
+    var ok = await bootstrapAuth();
+    if(!ok) return;
+
+    tasksCol = makeTasksCol();
+    Object.keys(MODULE_DEFS).forEach(function(mk){ recordCols[mk] = makeRecordCol(mk); });
+
+    try{
+      var tres = await apiFetch('/tasks');
+      var freshTasks = {};
+      (tres && tres.tasks || []).forEach(function(row){ var t = taskFromApi(row); freshTasks[t.id] = t; });
+      state.tasks = freshTasks;
+    }catch(e){ console.warn('load tasks failed', e); showToast('Не удалось загрузить задачи — обновите страницу.', true); }
+
+    await Promise.all(Object.keys(MODULE_DEFS).map(function(mk){
+      return apiFetch('/records/' + mk).then(function(rres){
+        var fresh = {};
+        (rres && rres.records || []).forEach(function(r){ fresh[r.id] = r; });
+        state.records[mk] = fresh;
+      }).catch(function(e){ console.warn('load records failed (' + mk + ')', e); });
+    }));
+
+    render();
+  }
+
+  function saveFailMsg(e){
+    var msg = (e && e.message) || '';
+    if(/too large|size|256|exceed/i.test(msg)) return 'Задача не сохранилась — превышен лимит размера (слишком много/тяжёлые файлы). Уберите файл или дайте ссылку вместо него.';
+    return 'Не удалось сохранить изменения — проверьте связь и попробуйте ещё раз.';
+  }
+  function saveTask(task){
+    state.tasks[task.id] = task; render();
+    if(tasksCol){ tasksCol.doc(task.id).set(task).catch(function(e){ console.warn('save failed', e); showToast(saveFailMsg(e), true); }); }
+    return task;
+  }
+  function patchTask(id, patch){
+    var t = state.tasks[id]; if(!t) return null;
+    var updated = Object.assign({}, t, patch, { updatedAt: Date.now() });
+    state.tasks[id] = updated; render();
+    if(tasksCol){
+      tasksCol.doc(id).update(patch).catch(function(){
+        tasksCol.doc(id).set(updated).catch(function(e){ console.warn('save failed', e); showToast(saveFailMsg(e), true); });
+      });
+    }
+    return updated;
+  }
+  function removeTask(id){
+    var t = state.tasks[id]; if(!t) return;
+    delete state.tasks[id]; render();
+    if(tasksCol){ tasksCol.doc(id).delete().catch(function(){ showToast('Не удалось удалить задачу — попробуйте ещё раз.', true); }); }
+    showActionToast('Задача «' + t.title + '» удалена', 'Отменить', function(){
+      state.tasks[id] = t; render();
+      if(tasksCol){ tasksCol.doc(id).set(t).catch(function(e){ showToast(saveFailMsg(e), true); }); }
+    });
+  }
+
+  /* ---- generic CRUD for the module records (sales/production/warehouse/finance/documents/regulations) ---- */
+  function saveRecord(moduleKey, rec){
+    state.records[moduleKey][rec.id] = rec; render();
+    var col = recordCols[moduleKey];
+    if(col){ col.doc(rec.id).set(rec).catch(function(e){ console.warn('save failed', e); showToast(saveFailMsg(e), true); }); }
+    return rec;
+  }
+  function patchRecord(moduleKey, id, patch){
+    var r = state.records[moduleKey][id]; if(!r) return null;
+    var extra = { updatedAt: Date.now() };
+    if(patch.stage !== undefined) extra.stageAt = Date.now();
+    var updated = Object.assign({}, r, patch, extra);
+    state.records[moduleKey][id] = updated; render();
+    var col = recordCols[moduleKey];
+    if(col){
+      col.doc(id).update(Object.assign({}, patch, extra)).catch(function(){
+        col.doc(id).set(updated).catch(function(e){ console.warn('save failed', e); showToast(saveFailMsg(e), true); });
+      });
+    }
+    return updated;
+  }
+  function kanbanMove(moduleKey, id, dir){
+    var kd = KANBAN_DEFS[moduleKey]; var r = state.records[moduleKey][id]; if(!kd || !r) return;
+    var idx = kd.order.indexOf(r.stage || kd.order[0]);
+    var next = idx + dir;
+    if(next < 0 || next >= kd.order.length) return;
+    patchRecord(moduleKey, id, { stage: kd.order[next] });
+    showToast('Перемещено: ' + kd.map[kd.order[next]].label);
+  }
+  function removeRecord(moduleKey, id){
+    var r = state.records[moduleKey][id]; if(!r) return;
+    delete state.records[moduleKey][id]; render();
+    var col = recordCols[moduleKey];
+    if(col){ col.doc(id).delete().catch(function(){ showToast('Не удалось удалить запись — попробуйте ещё раз.', true); }); }
+    showActionToast('Запись удалена', 'Отменить', function(){
+      state.records[moduleKey][id] = r; render();
+      if(col){ col.doc(id).set(r).catch(function(e){ showToast(saveFailMsg(e), true); }); }
+    });
+  }
+  function recordsArr(moduleKey){ var o = state.records[moduleKey]||{}; return Object.keys(o).map(function(k){ return o[k]; }); }
+  function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('ru-RU') + ' ₽'; }
+
+  function allTasksArr(){ return Object.keys(state.tasks).map(function(k){ return state.tasks[k]; }); }
+  function counts(){
+    var c = { all:0, metalizm:0, printbar:0, sprintami:0, other:0 };
+    allTasksArr().forEach(function(t){ if(t.status==='done') return; c.all++; c[t.project]=(c[t.project]||0)+1; });
+    return c;
+  }
+  function headlineStats(){
+    var t = todayISO(), burning = 0, doneWeek = 0, open = 0, weekAgo = Date.now() - 7*86400000;
+    allTasksArr().forEach(function(x){
+      if(x.status==='done'){ if((x.updatedAt||x.createdAt||0) >= weekAgo) doneWeek++; return; }
+      open++;
+      if(x.due && x.due <= t) burning++;
+    });
+    return { open: open, burning: burning, doneWeek: doneWeek };
+  }
+  function staleDays(t){
+    if(t.due || t.status==='done' || !t.createdAt) return 0;
+    return Math.floor((Date.now() - t.createdAt) / 86400000);
+  }
+  function filtered(){
+    var q = state.search.trim().toLowerCase();
+    return allTasksArr().filter(function(t){
+      if(!state.showDone && t.status==='done') return false;
+      if(state.projectFilter!=='all' && t.project!==state.projectFilter) return false;
+      if(state.leverFilter!=='all' && t.lever!==state.leverFilter) return false;
+      if(q && (t.title||'').toLowerCase().indexOf(q)===-1 && (t.notes||'').toLowerCase().indexOf(q)===-1) return false;
+      return true;
+    });
+  }
+  function groupTasks(list){
+    var groups = { overdue:[], today:[], week:[], later:[], none:[], done:[] };
+    var t = todayISO();
+    list.forEach(function(task){
+      if(task.status === 'done'){ groups.done.push(task); return; }
+      if(!task.due){ groups.none.push(task); return; }
+      if(task.due < t) groups.overdue.push(task);
+      else if(task.due === t) groups.today.push(task);
+      else { var days = Math.round((new Date(task.due+"T00:00:00") - new Date(t+"T00:00:00"))/86400000); if(days<=7) groups.week.push(task); else groups.later.push(task); }
+    });
+    Object.keys(groups).forEach(function(k){ groups[k].sort(function(a,b){ return (a.due||'9999').localeCompare(b.due||'9999'); }); });
+    return groups;
+  }
+
+  function taskRow(t){
+    var proj = PROJECTS[t.project] || PROJECTS.other;
+    var lev = LEVERS[t.lever] || LEVERS.ops;
+    var dc = dueClass(t.due);
+    var prog = checklistProgress(t);
+    var stale = staleDays(t);
+    return '' +
+    '<div class="task '+(t.status==='done'?'done':'')+'" data-id="'+t.id+'">' +
+      '<button class="task-check" data-action="toggle" data-id="'+t.id+'" aria-label="Отметить выполненным"><i data-feather="check"></i></button>' +
+      '<div>' +
+        '<div class="task-title" data-action="view" data-id="'+t.id+'">'+esc(t.title)+'</div>' +
+        (t.notes ? '<div class="task-notes">'+esc(t.notes)+'</div>' : '') +
+        '<div class="task-meta">' +
+          '<span class="chip chip-project">'+esc(proj.short)+'</span>' +
+          '<span class="chip '+lev.cls+'">'+esc(lev.label)+'</span>' +
+          '<span class="chip chip-due '+dc+'"><i data-feather="'+(t.reminder?'bell':'calendar')+'"></i>'+esc(dueLabel(t))+'</span>' +
+          (prog ? '<span class="chip chip-checklist"><i data-feather="check-square"></i>'+prog+'</span>' : '') +
+          (t.links && t.links.length ? '<span class="chip chip-link"><i data-feather="link-2"></i>'+t.links.length+'</span>' : '') +
+          (t.attachments && t.attachments.length ? '<span class="chip chip-link"><i data-feather="paperclip"></i>'+t.attachments.length+'</span>' : '') +
+          (stale >= 5 ? '<span class="chip chip-stale" title="Без срока и без движения"><i data-feather="clock"></i>висит '+stale+' дн.</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn btn-ghost btn-icon" data-action="ask" data-id="'+t.id+'" title="Спросить Клода"><i data-feather="zap"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit" data-id="'+t.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del" data-id="'+t.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  function groupBlock(title, list){
+    if(!list.length) return '';
+    return '<div class="group"><div class="group-title">'+title+' <span class="mono">— '+list.length+'</span><span class="line"></span></div><div class="task-list">' + list.map(taskRow).join('') + '</div></div>';
+  }
+  function sidebarProjectItem(key, label, cnt){
+    var active = state.projectFilter===key;
+    var color = key==='all' ? 'var(--ink-faint)' : PROJECTS[key].color;
+    return '<button class="filter-item '+(active?'active':'')+'" data-action="filter-project" data-key="'+key+'"><span><span class="dot" style="background:'+color+'"></span>'+esc(label)+'</span><span class="count">'+cnt+'</span></button>';
+  }
+  function sidebarLeverItem(key, label){
+    var active = state.leverFilter===key;
+    return '<button class="filter-item '+(active?'active':'')+'" data-action="filter-lever" data-key="'+key+'"><span>'+esc(label)+'</span></button>';
+  }
+
+  var NAV_PRIMARY_COUNT = MODULE_ORDER.length;
+  function navBadgeCount(mk){
+    if(mk==='tasks') return counts().all;
+    if(mk==='sales') return recordsArr('sales').length;
+    if(mk==='production') return recordsArr('production').length;
+    if(mk==='documents') return recordsArr('documents').length + recordsArr('regulations').length + recordsArr('goals').length;
+    return null;
+  }
+  function navItemHtml(mk, extraClass){
+    var meta = MODULE_META[mk];
+    var active = state.module === mk;
+    var count = navBadgeCount(mk);
+    return '<button type="button" class="nav-item '+(active?'active ':'')+(extraClass||'')+'" data-action="switch-module" data-key="'+mk+'">' +
+      '<i data-feather="'+meta.icon+'"></i><span class="nav-label">'+esc(meta.label)+'</span>' +
+      (count!=null ? '<span class="badge">'+count+'</span>' : '') +
+    '</button>';
+  }
+  function renderNavRail(){
+    var primary = MODULE_ORDER.slice(0, NAV_PRIMARY_COUNT);
+    var secondary = MODULE_ORDER.slice(NAV_PRIMARY_COUNT);
+    var secondaryActive = secondary.indexOf(state.module) !== -1;
+    els.navRail.innerHTML =
+      '<div class="nav-brand"><i data-feather="tool"></i> Верстак</div>' +
+      primary.map(function(mk){ return navItemHtml(mk); }).join('') +
+      secondary.map(function(mk){ return navItemHtml(mk, 'nav-item-secondary'); }).join('') +
+      (secondary.length ? ('<button type="button" class="nav-item nav-more-btn '+(secondaryActive?'active':'')+'" data-action="toggle-nav-more">' +
+        '<i data-feather="more-horizontal"></i><span class="nav-label">Ещё</span>' +
+      '</button>') : '');
+    if(els.navMoreSheet){
+      els.navMoreSheet.innerHTML = secondary.map(function(mk){ return navItemHtml(mk); }).join('');
+      els.navMoreSheet.hidden = !state.navMoreOpen;
+      els.navMoreBackdrop.hidden = !state.navMoreOpen;
+    }
+  }
+  function syncChatToggle(){
+    var ct = document.getElementById('chatToggle');
+    var cd = document.getElementById('chatDrawer');
+    if(!ct || !cd) return;
+    // на дашборде уже есть встроенный чат — плавающая кнопка ни к чему, прячем её (и сворачиваем окно, если было открыто)
+    if(state.module==='dashboard'){ cd.hidden = true; ct.hidden = true; return; }
+    ct.hidden = state.navMoreOpen || !cd.hidden;
+  }
+
+  function renderTasksBody(){
+    var list = filtered();
+    var groups = groupTasks(list);
+    var c = counts();
+    var hs = headlineStats();
+
+    var body =
+    '<div class="topbar">' +
+      '<div>' +
+        '<div class="brand-eyebrow"><i data-feather="tool"></i> Бизнес-ассистент</div>' +
+        '<h1>Верстак</h1>' +
+        '<div class="sub">Задачи по METALIZM, Принт Бар и Спринтами — в одном месте, с Клодом под рукой для каждой.</div>' +
+      '</div>' +
+      '<div class="top-actions">' +
+        '<button class="btn" data-action="toggle-done">'+(state.showDone? 'Скрыть выполненные':'Показать выполненные')+'</button>' +
+        '<button class="btn btn-accent" data-action="digest"><i data-feather="sun"></i> Дайджест на сегодня</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="layout">' +
+      '<div class="sidebar">' +
+        '<div class="search-box"><i data-feather="search"></i><input type="text" id="taskSearch" placeholder="Поиск по задачам…" value="'+esc(state.search)+'" />' +
+          (state.search ? '<button type="button" class="search-clear" data-action="clear-search" aria-label="Очистить"><i data-feather="x"></i></button>' : '') +
+        '</div>' +
+        '<div class="filter-group"><h3>Проекты</h3><div class="filter-list">' +
+          sidebarProjectItem('all', 'Все проекты', c.all) +
+          sidebarProjectItem('metalizm', PROJECTS.metalizm.short, c.metalizm||0) +
+          sidebarProjectItem('printbar', PROJECTS.printbar.short, c.printbar||0) +
+          sidebarProjectItem('sprintami', PROJECTS.sprintami.short, c.sprintami||0) +
+          sidebarProjectItem('other', PROJECTS.other.short, c.other||0) +
+        '</div></div>' +
+        '<div class="filter-group"><h3>Рычаг роста</h3><div class="filter-list">' +
+          sidebarLeverItem('all', 'Все') + sidebarLeverItem('sales', 'Продажи') + sidebarLeverItem('ops', 'Операционка') + sidebarLeverItem('scale', 'Масштаб') +
+        '</div></div>' +
+        '<div class="info-card">' +
+          '<h3><i data-feather="info"></i> Как это работает</h3>' +
+          '<p>Чат внизу справа заводит и структурирует задачи из разговора. Откройте задачу кликом по названию — там отдельный чат с памятью именно по ней: Клод вникает в контекст, ведёт по шагам и сам углубляет описание и чек-лист по ходу разговора.</p>' +
+          (db ? '' : '<p style="color:var(--warn)">Хранилище недоступно в этом просмотре — изменения не сохранятся между визитами.</p>') +
+        '</div>' +
+      '</div>' +
+      '<div class="main">' +
+        '<div class="stat-row">' +
+          '<div class="stat-tile stat-lime"><span class="stat-badge"><i data-feather="target"></i></span><div><div class="stat-num">'+hs.open+'</div><div class="stat-lbl">Открыто</div></div></div>' +
+          '<div class="stat-tile stat-warn"><span class="stat-badge"><i data-feather="zap"></i></span><div><div class="stat-num">'+hs.burning+'</div><div class="stat-lbl">Горит сегодня</div></div></div>' +
+          '<div class="stat-tile stat-ok"><span class="stat-badge"><i data-feather="check-circle"></i></span><div><div class="stat-num">'+hs.doneWeek+'</div><div class="stat-lbl">Выполнено за 7 дн.</div></div></div>' +
+        '</div>' +
+        '<div class="addbar"><button class="btn btn-accent" data-action="new-task"><i data-feather="plus"></i> Новая задача</button></div>' +
+        (list.length ? (
+          groupBlock('Просрочено', groups.overdue) + groupBlock('Сегодня', groups.today) + groupBlock('На этой неделе', groups.week) +
+          groupBlock('Позже', groups.later) + groupBlock('Без срока', groups.none) + groupBlock('Выполнено', groups.done)
+        ) : '<div class="empty">Нет задач под текущий фильтр — измените фильтр слева, добавьте задачу кнопкой выше или через чат с Клодом.</div>') +
+      '</div>' +
+    '</div>';
+
+    return body;
+  }
+
+  /* ---- kanban card renderer: Продажи / Производство ---- */
+  function kanbanCard(moduleKey, r, idx, order, stageMap){
+    var proj = PROJECTS[r.project] || PROJECTS.other;
+    var title = moduleKey==='sales' ? (esc(r.client||'')+(r.client&&r.title?' — ':'')+esc(r.title||'')) : esc(r.title||'');
+    return '<div class="kanban-card" data-id="'+r.id+'">' +
+      '<div class="kanban-card-title" data-action="edit-record" data-module="'+moduleKey+'" data-id="'+r.id+'">'+title+'</div>' +
+      (moduleKey==='production' && r.client ? '<div class="kanban-card-sub">'+esc(r.client)+'</div>' : '') +
+      '<div class="kanban-card-meta">' +
+        '<span class="chip chip-project">'+esc(proj.short)+'</span>' +
+        (r.amount ? '<span class="chip chip-checklist">'+fmtMoney(r.amount)+'</span>' : '') +
+        (r.due ? '<span class="chip chip-due '+dueClass(r.due)+'"><i data-feather="calendar"></i>'+esc(dueLabel({due:r.due}))+'</span>' : '') +
+      '</div>' +
+      '<div class="kanban-card-actions">' +
+        (idx>0 ? '<button class="btn btn-ghost kanban-btn" data-action="kanban-back" data-module="'+moduleKey+'" data-id="'+r.id+'"><i data-feather="arrow-left"></i> Назад</button>' : '<span></span>') +
+        (idx<order.length-1 ? '<button class="btn btn-accent kanban-btn" data-action="kanban-advance" data-module="'+moduleKey+'" data-id="'+r.id+'">Дальше <i data-feather="arrow-right"></i></button>' : '<span class="chip chip-status-paid"><i data-feather="check"></i> Готово</span>') +
+      '</div>' +
+      '<div class="kanban-card-tools">' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit-record" data-module="'+moduleKey+'" data-id="'+r.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del-record" data-module="'+moduleKey+'" data-id="'+r.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  function renderKanbanBody(moduleKey){
+    var def = MODULE_DEFS[moduleKey];
+    var kd = KANBAN_DEFS[moduleKey];
+    var list = recordsArr(moduleKey);
+    var lastStage = kd.order[kd.order.length-1];
+    var totalAmount = moduleKey==='sales' ? list.filter(function(r){return r.stage!==lastStage;}).reduce(function(s,r){return s+(Number(r.amount)||0);},0) : null;
+    var doneCount = list.filter(function(r){ return r.stage===lastStage; }).length;
+    var burning = list.filter(function(r){ return r.due && r.due<=todayISO() && r.stage!==lastStage; }).length;
+    var tiles = moduleKey==='sales'
+      ? [ ['trending-up', fmtMoney(totalAmount), 'В воронке (не сдано в цех)', 'stat-lime'], ['alert-triangle', burning, 'Горит по сроку', 'stat-warn'], ['check-circle', doneCount, 'Передано в цех', 'stat-ok'] ]
+      : [ ['settings', list.length-doneCount, 'В производстве', 'stat-lime'], ['alert-triangle', burning, 'Горит по сроку', 'stat-warn'], ['check-circle', doneCount, 'Передано клиенту', 'stat-ok'] ];
+
+    var cols = kd.order.map(function(stageKey, idx){
+      var items = list.filter(function(r){ return (r.stage||kd.order[0])===stageKey; })
+        .sort(function(a,b){ return (a.due||'9999').localeCompare(b.due||'9999'); });
+      return '<div class="kanban-col">' +
+        '<div class="kanban-col-head"><span>'+esc(kd.map[stageKey].label)+'</span><span class="badge">'+items.length+'</span></div>' +
+        '<div class="kanban-col-body">' +
+          (items.length ? items.map(function(r){ return kanbanCard(moduleKey, r, idx, kd.order, kd.map); }).join('') :
+            '<div class="kanban-empty">Пусто</div>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="module-head"><div><h2><i data-feather="'+def.icon+'"></i> '+esc(def.label)+'</h2><p>'+esc(MODULE_INTROS[moduleKey]||'')+'</p></div>' +
+        '<button class="btn btn-accent" data-action="new-record" data-module="'+moduleKey+'"><i data-feather="plus"></i> Добавить</button>' +
+      '</div>' +
+      '<div class="module-stat-row">' + tiles.map(function(t){
+        return '<div class="stat-tile '+t[3]+'"><span class="stat-badge"><i data-feather="'+t[0]+'"></i></span><div><div class="stat-num">'+t[1]+'</div><div class="stat-lbl">'+t[2]+'</div></div></div>';
+      }).join('') + '</div>' +
+      '<div class="kanban-board">' + cols + '</div>';
+  }
+
+  /* ---- record row renderers: Финансы / Договоры / Регламенты / Цели ---- */
+  function financeRow(r){
+    var proj = PROJECTS[r.project] || PROJECTS.other;
+    var ft = FINANCE_TYPE[r.type] || FINANCE_TYPE.income;
+    var sign = r.type==='expense' ? '−' : '+';
+    return '<div class="task" data-id="'+r.id+'">' +
+      '<span class="task-check" style="cursor:default; border-color:transparent; background:transparent"><i data-feather="'+(r.type==='expense'?'arrow-down':'arrow-up')+'" style="width:16px;height:16px;color:var(--ink-faint)"></i></span>' +
+      '<div>' +
+        '<div class="task-title" data-action="edit-record" data-module="finance" data-id="'+r.id+'">'+esc(r.category||ft.label)+'</div>' +
+        (r.notes ? '<div class="task-notes">'+esc(r.notes)+'</div>' : '') +
+        '<div class="task-meta">' +
+          '<span class="chip '+ft.cls+'">'+sign+' '+fmtMoney(r.amount)+'</span>' +
+          '<span class="chip chip-project">'+esc(proj.short)+'</span>' +
+          (r.date ? '<span class="chip chip-due"><i data-feather="calendar"></i>'+esc(fmtDate(r.date))+'</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit-record" data-module="finance" data-id="'+r.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del-record" data-module="finance" data-id="'+r.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  function documentRow(r){
+    return '<div class="task" data-id="'+r.id+'">' +
+      '<span class="task-check" style="cursor:default; border-color:transparent; background:transparent"><i data-feather="file-text" style="width:16px;height:16px;color:var(--ink-faint)"></i></span>' +
+      '<div>' +
+        '<div class="task-title" data-action="edit-record" data-module="documents" data-id="'+r.id+'">'+esc(r.title)+'</div>' +
+        (r.notes ? '<div class="task-notes">'+esc(r.notes)+'</div>' : '') +
+        '<div class="task-meta">' +
+          (r.category ? '<span class="chip chip-project">'+esc(r.category)+'</span>' : '') +
+          (r.url ? '<a class="chip chip-link" href="'+esc(r.url)+'" target="_blank" rel="noopener" style="text-decoration:none"><i data-feather="external-link"></i>ссылка</a>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit-record" data-module="documents" data-id="'+r.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del-record" data-module="documents" data-id="'+r.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  function regulationRow(r){
+    var preview = (r.body||'').slice(0,120);
+    return '<div class="task" data-id="'+r.id+'">' +
+      '<span class="task-check" style="cursor:default; border-color:transparent; background:transparent"><i data-feather="book-open" style="width:16px;height:16px;color:var(--ink-faint)"></i></span>' +
+      '<div>' +
+        '<div class="task-title" data-action="edit-record" data-module="regulations" data-id="'+r.id+'">'+esc(r.title)+'</div>' +
+        (preview ? '<div class="task-notes">'+esc(preview)+(r.body&&r.body.length>120?'…':'')+'</div>' : '') +
+        '<div class="task-meta">' +
+          (r.category ? '<span class="chip chip-project">'+esc(r.category)+'</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit-record" data-module="regulations" data-id="'+r.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del-record" data-module="regulations" data-id="'+r.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  function goalRow(r){
+    var proj = PROJECTS[r.project] || PROJECTS.other;
+    var st = GOAL_STATUS[r.status] || GOAL_STATUS.active;
+    return '<div class="task" data-id="'+r.id+'">' +
+      '<span class="task-check" style="cursor:default; border-color:transparent; background:transparent"><i data-feather="flag" style="width:16px;height:16px;color:var(--ink-faint)"></i></span>' +
+      '<div>' +
+        '<div class="task-title" data-action="edit-record" data-module="goals" data-id="'+r.id+'">'+esc(r.title)+'</div>' +
+        (r.metric ? '<div class="task-notes">'+esc(r.metric)+'</div>' : '') +
+        '<div class="task-meta">' +
+          '<span class="chip chip-project">'+esc(proj.short)+'</span>' +
+          '<span class="chip '+st.cls+'">'+esc(st.label)+'</span>' +
+          (r.due ? '<span class="chip chip-due '+dueClass(r.due)+'"><i data-feather="calendar"></i>'+esc(dueLabel({due:r.due}))+'</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit-record" data-module="goals" data-id="'+r.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del-record" data-module="goals" data-id="'+r.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  var MODULE_ROW_RENDERERS = { finance:financeRow, documents:documentRow, regulations:regulationRow, goals:goalRow };
+  var MODULE_INTROS = {
+    sales: "Заявки и клиенты — от первого касания до передачи в цех.",
+    production: "Что сейчас в работе в цехах и на каком этапе.",
+    finance: "Простая касса: приходы и расходы по направлениям.",
+    documents: "Договоры, прайсы и другие бумаги — под рукой.",
+    regulations: "Как у нас принято делать — чтобы не держать в голове.",
+    goals: "Куда движется бизнес и как мы это измеряем."
+  };
+
+  function renderRecordList(moduleKey){
+    var list = recordsArr(moduleKey).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+    return list.length ? ('<div class="task-list">' + list.map(MODULE_ROW_RENDERERS[moduleKey]).join('') + '</div>') :
+      '<div class="empty">Пока пусто — добавьте первую запись кнопкой выше.</div>';
+  }
+
+  /* ---- ABC-анализ направлений по финансовой прибыли ---- */
+  function computeDirectionsABC(){
+    var finance = recordsArr('finance');
+    var keys = Object.keys(PROJECTS).filter(function(k){
+      if(k==='other') return finance.some(function(r){ return r.project==='other'; });
+      return true;
+    });
+    var rows = keys.map(function(k){
+      var inc = finance.filter(function(r){ return r.project===k && r.type==='income'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); },0);
+      var exp = finance.filter(function(r){ return r.project===k && r.type==='expense'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); },0);
+      return { key:k, label:PROJECTS[k].short, income:inc, expense:exp, net:inc-exp };
+    });
+    var totalPositive = rows.filter(function(r){ return r.net>0; }).reduce(function(s,r){ return s+r.net; },0) || 1;
+    rows.sort(function(a,b){ return b.net-a.net; });
+    var cum = 0;
+    rows.forEach(function(r){
+      if(r.net>0){ cum += r.net; r.share = r.net/totalPositive; r.cumShare = cum/totalPositive; r.cls = r.cumShare<=0.8?'A':(r.cumShare<=0.95?'B':'C'); }
+      else { r.share = 0; r.cls = null; }
+    });
+    return rows;
+  }
+
+  /* ---- сильные / слабые стороны для дашборда ---- */
+  function computeInsights(){
+    var hs = headlineStats();
+    var sales = recordsArr('sales'), production = recordsArr('production');
+    var dirs = computeDirectionsABC();
+    var strengths = [], weaknesses = [];
+
+    var leader = dirs.filter(function(d){ return d.cls==='A'; })[0];
+    if(leader) strengths.push(leader.label + ' — направление-лидер по прибыли (класс A, '+Math.round(leader.share*100)+'% от общей).');
+    var lossy = dirs.filter(function(d){ return d.net<0; });
+    lossy.forEach(function(d){ weaknesses.push(d.label + ' сейчас в минус: ' + fmtMoney(d.net) + '.'); });
+
+    var overdueSales = sales.filter(function(r){ return r.due && r.due<todayISO() && r.stage!=='to_production'; });
+    if(overdueSales.length) weaknesses.push(overdueSales.length + ' заявок в продажах просрочены по сроку.');
+    else if(sales.length) strengths.push('Просроченных заявок в продажах нет.');
+
+    var overdueProd = production.filter(function(r){ return r.due && r.due<todayISO() && r.stage!=='delivered'; });
+    if(overdueProd.length) weaknesses.push(overdueProd.length + ' заказов в производстве горят по сроку.');
+
+    var stuckSales = sales.filter(function(r){ return r.stage!=='to_production' && r.stageAt && (Date.now()-r.stageAt) > 7*86400000; });
+    if(stuckSales.length) weaknesses.push(stuckSales.length + ' заявок висят на одном этапе больше недели без движения.');
+
+    if(hs.burning===0) strengths.push('Нет горящих задач на сегодня.');
+    else weaknesses.push(hs.burning + ' ' + (hs.burning===1?'задача горит':'задач горят') + ' сегодня.');
+
+    if(hs.doneWeek>0) strengths.push('Выполнено ' + hs.doneWeek + ' ' + (hs.doneWeek===1?'задача':'задач') + ' за последние 7 дней.');
+
+    if(!strengths.length) strengths.push('Пока рано делать выводы — маловато данных.');
+    if(!weaknesses.length) weaknesses.push('Слабых мест не видно — так держать.');
+    return { strengths:strengths, weaknesses:weaknesses };
+  }
+
+  function buildBusinessSummaryForAI(){
+    var hs = headlineStats();
+    var sales = recordsArr('sales'), production = recordsArr('production'), goals = recordsArr('goals');
+    var dirs = computeDirectionsABC();
+    var lines = [];
+    lines.push('Задачи: открыто ' + hs.open + ', горит сегодня ' + hs.burning + ', выполнено за 7 дн ' + hs.doneWeek + '.');
+    lines.push('Продажи (канбан): ' + SALES_STAGE_ORDER.map(function(k){ return SALES_STAGE[k].label + '=' + sales.filter(function(r){return (r.stage||SALES_STAGE_ORDER[0])===k;}).length; }).join(', ') + '.');
+    lines.push('Производство (канбан): ' + PRODUCTION_STAGE_ORDER.map(function(k){ return PRODUCTION_STAGE[k].label + '=' + production.filter(function(r){return (r.stage||PRODUCTION_STAGE_ORDER[0])===k;}).length; }).join(', ') + '.');
+    lines.push('Финансы по направлениям (приход / расход / прибыль / класс ABC): ' + dirs.map(function(d){
+      return d.label + ': ' + fmtMoney(d.income) + ' / ' + fmtMoney(d.expense) + ' / ' + fmtMoney(d.net) + (d.cls ? ' / '+d.cls : '');
+    }).join('; ') + '.');
+    if(goals.length) lines.push('Цели компании: ' + goals.map(function(g){ return g.title + ' ('+(GOAL_STATUS[g.status]||GOAL_STATUS.active).label+')'; }).join('; ') + '.');
+    return lines.join('\n');
+  }
+  function buildDocumentsSummaryForAI(){
+    var docs = recordsArr('documents');
+    if(!docs.length) return 'Сохранённых документов пока нет.';
+    return docs.map(function(d){ return '- ' + d.title + (d.category ? (' ('+d.category+')') : ''); }).join('\n');
+  }
+
+  function renderDashboardBody(){
+    var hs = headlineStats();
+    var sales = recordsArr('sales'), production = recordsArr('production'), finance = recordsArr('finance');
+    var income = finance.filter(function(r){ return r.type==='income'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); },0);
+    var expense = finance.filter(function(r){ return r.type==='expense'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); },0);
+    var activeProduction = production.filter(function(r){ return r.stage!=='delivered'; }).length;
+    var insights = computeInsights();
+
+    return (
+    '<div class="topbar">' +
+      '<div>' +
+        '<div class="brand-eyebrow"><i data-feather="tool"></i> Бизнес-ассистент</div>' +
+        '<h1>Верстак</h1>' +
+        '<div class="sub">Общая картина по METALIZM, Принт Бар и Спринтами — на одном экране, с Клодом под рукой для разбора.</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="module-stat-row">' +
+      '<div class="stat-tile stat-ok"><span class="stat-badge"><i data-feather="arrow-up"></i></span><div><div class="stat-num">'+fmtMoney(income)+'</div><div class="stat-lbl">Выручка (приход)</div></div></div>' +
+      '<div class="stat-tile stat-lime"><span class="stat-badge"><i data-feather="dollar-sign"></i></span><div><div class="stat-num">'+fmtMoney(income-expense)+'</div><div class="stat-lbl">Прибыль</div></div></div>' +
+      '<div class="stat-tile stat-warn"><span class="stat-badge"><i data-feather="target"></i></span><div><div class="stat-num">'+hs.open+'</div><div class="stat-lbl">Открытых задач</div></div></div>' +
+      '<div class="stat-tile stat-lime"><span class="stat-badge"><i data-feather="settings"></i></span><div><div class="stat-num">'+activeProduction+'</div><div class="stat-lbl">В производстве</div></div></div>' +
+    '</div>' +
+    '<div class="analytics-grid">' +
+      '<div class="analytics-card"><h3><i data-feather="trending-up"></i> Сильные стороны</h3>' +
+        insights.strengths.map(function(s){ return '<div class="analytics-row"><span class="label">'+esc(s)+'</span></div>'; }).join('') +
+      '</div>' +
+      '<div class="analytics-card"><h3><i data-feather="alert-triangle"></i> Слабые стороны</h3>' +
+        insights.weaknesses.map(function(s){ return '<div class="analytics-row"><span class="label">'+esc(s)+'</span></div>'; }).join('') +
+      '</div>' +
+    '</div>' +
+    '<div class="dash-chat-head-row"><h3><i data-feather="terminal"></i> Обсудить с Клодом</h3><p>Стратегия, приоритеты, что делать с узкими местами — Клод видит срез всех разделов выше.</p></div>' +
+    '<div id="dashChatSlot" class="dash-chat-slot"></div>'
+    );
+  }
+
+  function renderRevenueBody(){
+    var sales = recordsArr('sales'), production = recordsArr('production'), finance = recordsArr('finance');
+    var income = finance.filter(function(r){ return r.type==='income'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); },0);
+    var expense = finance.filter(function(r){ return r.type==='expense'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); },0);
+    var ordersCount = sales.length + production.length;
+    var dirs = computeDirectionsABC();
+
+    var abcRows = dirs.map(function(d){
+      return '<div class="analytics-row"><span class="label">'+esc(d.label)+(d.cls?' <span class="chip chip-abc-'+d.cls.toLowerCase()+'">'+d.cls+'</span>':(d.net<0?' <span class="chip chip-status-overdue">убыток</span>':''))+'</span>' +
+        '<span class="value">'+fmtMoney(d.income)+' − '+fmtMoney(d.expense)+' = '+fmtMoney(d.net)+'</span></div>';
+    }).join('');
+
+    return (
+    '<div class="module-head"><div><h2><i data-feather="bar-chart-2"></i> Выручка и заказы</h2><p>Общая касса и то, какие направления реально приносят прибыль.</p></div>' +
+      '<button class="btn btn-accent" data-action="new-record" data-module="finance"><i data-feather="plus"></i> Добавить операцию</button>' +
+    '</div>' +
+    '<div class="module-stat-row">' +
+      '<div class="stat-tile stat-ok"><span class="stat-badge"><i data-feather="arrow-up"></i></span><div><div class="stat-num">'+fmtMoney(income)+'</div><div class="stat-lbl">Выручка</div></div></div>' +
+      '<div class="stat-tile stat-warn"><span class="stat-badge"><i data-feather="arrow-down"></i></span><div><div class="stat-num">'+fmtMoney(expense)+'</div><div class="stat-lbl">Расходы</div></div></div>' +
+      '<div class="stat-tile stat-lime"><span class="stat-badge"><i data-feather="dollar-sign"></i></span><div><div class="stat-num">'+fmtMoney(income-expense)+'</div><div class="stat-lbl">Прибыль</div></div></div>' +
+      '<div class="stat-tile stat-lime"><span class="stat-badge"><i data-feather="hash"></i></span><div><div class="stat-num">'+ordersCount+'</div><div class="stat-lbl">Заказов всего</div></div></div>' +
+    '</div>' +
+    '<div class="analytics-card" style="margin-bottom:20px"><h3><i data-feather="pie-chart"></i> ABC-анализ направлений по прибыли</h3>' +
+      (abcRows || '<div class="module-empty-note">Пока нет данных по кассе — добавьте операции ниже.</div>') +
+    '</div>' +
+    '<div class="module-head" style="margin-bottom:12px"><div><h2 style="font-size:15px"><i data-feather="dollar-sign"></i> Касса</h2></div></div>' +
+    renderRecordList('finance')
+    );
+  }
+
+  function renderDocumentsBody(){
+    var sub = state.docSubTab;
+    var def = MODULE_DEFS[sub];
+    return (
+    '<div class="module-head"><div><h2><i data-feather="file-text"></i> Документы</h2><p>Договоры, регламенты и цели компании — в одном разделе.</p></div>' +
+      '<button class="btn btn-accent" data-action="new-record" data-module="'+sub+'"><i data-feather="plus"></i> Добавить</button>' +
+    '</div>' +
+    '<div class="doc-subtabs">' + DOC_SUBTABS.map(function(t){
+      return '<button type="button" class="doc-subtab '+(sub===t.key?'active':'')+'" data-action="switch-doc-tab" data-key="'+t.key+'"><i data-feather="'+t.icon+'"></i>'+esc(t.label)+' <span class="badge">'+recordsArr(t.key).length+'</span></button>';
+    }).join('') + '</div>' +
+    '<p class="doc-subtab-intro">'+esc(MODULE_INTROS[sub]||'')+'</p>' +
+    renderRecordList(sub)
+    );
+  }
+
+  function render(){
+    var m = state.module;
+    var body;
+    if(m==='dashboard') body = renderDashboardBody();
+    else if(m==='tasks') body = renderTasksBody();
+    else if(m==='sales') body = renderKanbanBody('sales');
+    else if(m==='production') body = renderKanbanBody('production');
+    else if(m==='revenue') body = renderRevenueBody();
+    else if(m==='documents') body = renderDocumentsBody();
+
+    els.app.innerHTML = body;
+    renderNavRail();
+    refreshIcons();
+    if(m==='dashboard'){
+      var slot = document.getElementById('dashChatSlot');
+      if(slot && dashChatPanelEl) slot.appendChild(dashChatPanelEl);
+      renderDashChat();
+    }
+    syncChatToggle();
+  }
+
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    var action = btn.getAttribute('data-action');
+    var id = btn.getAttribute('data-id');
+    if(action==='toggle'){ var t=state.tasks[id]; if(t) patchTask(id, { status: t.status==='done'?'open':'done' }); }
+    else if(action==='del'){ removeTask(id); }
+    else if(action==='ask'){ askAboutTask(id); }
+    else if(action==='view'){ openTaskWorkspace(id); }
+    else if(action==='edit'){ openTaskEditor(id); }
+    else if(action==='new-task'){ openTaskEditor(null); }
+    else if(action==='toggle-done'){ state.showDone = !state.showDone; render(); }
+    else if(action==='filter-project'){ state.projectFilter = btn.getAttribute('data-key'); render(); }
+    else if(action==='filter-lever'){ state.leverFilter = btn.getAttribute('data-key'); render(); }
+    else if(action==='digest'){ runDigest(); }
+    else if(action==='clear-search'){ state.search = ''; render(); document.getElementById('taskSearch').focus(); }
+    else if(action==='switch-module'){ state.module = btn.getAttribute('data-key'); state.navMoreOpen = false; render(); syncChatToggle(); }
+    else if(action==='toggle-nav-more'){ state.navMoreOpen = !state.navMoreOpen; renderNavRail(); refreshIcons(); syncChatToggle(); }
+    else if(action==='close-nav-more'){ state.navMoreOpen = false; renderNavRail(); syncChatToggle(); }
+    else if(action==='new-record'){ openRecordEditor(btn.getAttribute('data-module'), null); }
+    else if(action==='edit-record'){ openRecordEditor(btn.getAttribute('data-module'), id); }
+    else if(action==='del-record'){ removeRecord(btn.getAttribute('data-module'), id); }
+    else if(action==='kanban-advance'){ kanbanMove(btn.getAttribute('data-module'), id, 1); }
+    else if(action==='kanban-back'){ kanbanMove(btn.getAttribute('data-module'), id, -1); }
+    else if(action==='switch-doc-tab'){ state.docSubTab = btn.getAttribute('data-key'); render(); }
+  });
+
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.id==='taskSearch'){
+      var pos = e.target.selectionStart;
+      state.search = e.target.value;
+      render();
+      var el = document.getElementById('taskSearch');
+      if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} }
+    }
+  });
+
+  /* ============ ask-claude / digest overlay ============ */
+  var overlay = document.getElementById('overlay');
+  var panelTitle = document.getElementById('panelTitle');
+  var panelSub = document.getElementById('panelSub');
+  var panelBody = document.getElementById('panelBody');
+  var panelStop = document.getElementById('panelStop');
+  var panelAsk = document.getElementById('panelAsk');
+  var currentCtl = null, lastAskFn = null;
+
+  function openPanel(title, sub){
+    panelTitle.innerHTML = title; panelSub.textContent = sub || '';
+    panelBody.textContent = ''; panelBody.classList.remove('thinking');
+    overlay.hidden = false; refreshIcons();
+  }
+  document.getElementById('panelClose').addEventListener('click', function(){ overlay.hidden = true; if(currentCtl) currentCtl.abort(); });
+  overlay.addEventListener('click', function(e){ if(e.target===overlay){ overlay.hidden = true; if(currentCtl) currentCtl.abort(); } });
+  panelStop.addEventListener('click', function(){ if(currentCtl) currentCtl.abort(); });
+  panelAsk.addEventListener('click', function(){ if(lastAskFn) lastAskFn(true); });
+
+  function errCopy(e){
+    var msgs = {
+      not_granted: 'Доступ к Клоду не разрешён для этой страницы.',
+      rate_limited: 'Слишком много запросов подряд — подождите немного и попробуйте снова.',
+      refused: 'Клод отказался отвечать на этот запрос.',
+      empty_completion: 'Не получилось получить ответ — попробуйте ещё раз.',
+      upstream_error: 'Временная ошибка сервиса — попробуйте ещё раз.'
+    };
+    return msgs[e.code] || ('Ошибка: ' + e.message);
+  }
+
+  /* ============ chatGptSample: replaces window.claude.use('sample') ============
+     Same call contract as the old capability so every call site (askAboutTask, runDigest,
+     sendWorkspaceMessage, sendChat, workspaceTools/chatTaskTools defs) needs zero changes:
+       sample(turnsOrPrompt, opts) -> Promise<{text, truncated}>
+       turnsOrPrompt: a prompt string, or an array of {role:'user'|'assistant'|'system', content}
+       opts: { signal, onText(u) [u.text], tools?: [{name, description, inputSchema, execute}], cache? }
+     Talks to POST /chat, which does ONE step at a time (either {text} or {tool_calls}) — this
+     function runs the loop: on tool_calls, it executes each tool's own (synchronous) .execute()
+     locally — same execute() functions as before, already mutating state/persisting via
+     saveTask/patchTask/etc. — appends the assistant tool_calls turn + one tool-result turn per
+     call, and posts /chat again, until a final {text} comes back. ============ */
+  async function chatGptSample(turnsOrPrompt, opts){
+    opts = opts || {};
+    var messages = typeof turnsOrPrompt === 'string'
+      ? [{ role:'user', content: turnsOrPrompt }]
+      : turnsOrPrompt.map(function(m){ return { role: (m.role==='assistant'?'assistant':(m.role==='system'?'system':'user')), content: m.content }; });
+
+    var toolDefs = opts.tools ? (typeof opts.tools === 'function' ? opts.tools() : opts.tools) : null;
+    var toolsByName = {}, openaiTools = null;
+    if(toolDefs && toolDefs.length){
+      openaiTools = toolDefs.map(function(t){
+        toolsByName[t.name] = t;
+        return { type:'function', function:{ name:t.name, description:t.description, parameters:t.inputSchema } };
+      });
+    }
+
+    var maxSteps = 8;
+    for(var step = 0; step < maxSteps; step++){
+      var body = { messages: messages };
+      if(openaiTools) body.tools = openaiTools;
+
+      var res;
+      try{
+        res = await apiFetch('/chat', { method:'POST', body: body, signal: opts.signal });
+      }catch(e){
+        if(e && (e.name === 'AbortError' || (opts.signal && opts.signal.aborted))){
+          var cancelErr = new Error('cancelled'); cancelErr.code = 'cancelled'; cancelErr.text = ''; throw cancelErr;
+        }
+        var upErr = new Error((e && e.message) || 'upstream error'); upErr.code = 'upstream_error'; throw upErr;
+      }
+
+      if(res && res.tool_calls && res.tool_calls.length){
+        messages.push({ role:'assistant', content:null, tool_calls: res.tool_calls.map(function(tc){
+          return { id: tc.id, type:'function', function:{ name: tc.name, arguments: tc.arguments } };
+        }) });
+        for(var i=0; i<res.tool_calls.length; i++){
+          var tc = res.tool_calls[i];
+          var tool = toolsByName[tc.name];
+          var result;
+          try{
+            var args = {}; try{ args = tc.arguments ? JSON.parse(tc.arguments) : {}; }catch(pe){ args = {}; }
+            result = tool ? tool.execute(args) : { error: 'unknown tool: ' + tc.name };
+          }catch(execErr){
+            result = { error: (execErr && execErr.message) || String(execErr) };
+          }
+          messages.push({ role:'tool', tool_call_id: tc.id, content: JSON.stringify(result === undefined ? null : result) });
+        }
+        continue;
+      }
+
+      var text = (res && res.text) || '';
+      if(opts.onText){ try{ opts.onText({ text:text }); }catch(e2){} }
+      return { text: text, truncated: false };
+    }
+    var loopErr = new Error('too many tool-call steps'); loopErr.code = 'upstream_error'; throw loopErr;
+  }
+  var sample = chatGptSample;
+
+  /* ============ shared chat plumbing: every chat surface (main drawer, dashboard, task
+     workspace) sends through this one function — same sample() call shape,
+     same pending/streaming/error handling, same cancel-on-resend behaviour. ============ */
+  function runChatSend(turns, text, opts){
+    if(!text) return;
+    if(!sample){
+      turns.push({ role:'user', content:text });
+      turns.push({ role:'system', content: opts.disabledMsg || 'Чат с Клодом недоступен в этом просмотре.', _ephemeral: !!opts.disabledEphemeral });
+      opts.render();
+      return;
+    }
+    turns.push({ role:'user', content:text });
+    opts.render();
+
+    var instructions = typeof opts.instructions === 'function' ? opts.instructions() : opts.instructions;
+    var turnsForCall = [{ role:'user', content: instructions }].concat(
+      turns.filter(function(m){ return !m._ephemeral; }).map(function(m){ return { role: m.role==='assistant'?'assistant':'user', content: m.content }; })
+    );
+
+    turns.push({ role:'assistant', content:'…', _pending:true });
+    opts.render();
+
+    var prevCtl = opts.getCtl(); if(prevCtl) prevCtl.abort();
+    var ctl = new AbortController(); opts.setCtl(ctl);
+
+    var sampleOpts = { signal: ctl.signal, onText: function(u){
+      var last = turns[turns.length-1];
+      if(last && last._pending){ last.content = u.text; opts.render(); }
+    } };
+    if(opts.tools) sampleOpts.tools = typeof opts.tools === 'function' ? opts.tools() : opts.tools;
+    if(opts.cache !== undefined) sampleOpts.cache = opts.cache;
+
+    return sample(turnsForCall, sampleOpts).then(function(res){
+      var lastMsg = turns[turns.length-1];
+      if(lastMsg && lastMsg._pending){ lastMsg.content = res.text; delete lastMsg._pending; }
+      if(opts.persist) opts.persist();
+      opts.render();
+    }).catch(function(e){
+      var lastErr = turns[turns.length-1];
+      if(lastErr && lastErr._pending) turns.pop();
+      if(e.code !== 'cancelled'){ turns.push({ role:'system', content: errCopy(e) }); }
+      if(opts.persist) opts.persist();
+      opts.render();
+    });
+  }
+
+  async function askAboutTask(id){
+    var t = state.tasks[id]; if(!t) return;
+    var proj = PROJECTS[t.project] || PROJECTS.other, lev = LEVERS[t.lever] || LEVERS.ops;
+    openPanel('<i data-feather="zap"></i> Клод про задачу', t.title);
+    if(!sample){ panelBody.textContent = 'Функция «Спросить Клода» недоступна в этом просмотре.'; return; }
+    lastAskFn = function(refresh){ doAsk(refresh); };
+    function doAsk(refresh){
+      panelBody.classList.add('thinking'); panelBody.textContent = 'Клод думает…';
+      panelStop.hidden = false; panelAsk.hidden = true;
+      if(currentCtl) currentCtl.abort(); currentCtl = new AbortController();
+      var prompt = 'Ты — деловой ассистент владельца бизнеса в России (проекты: METALIZM — Telegram-бот с ИИ, печатающий фото на металле; Принт Бар — выездная мобильная печать фото; Спринтами — типография и широкоформатная печать).\n\n' +
+        'Задача:\nПроект: ' + proj.label + '\nРычаг роста: ' + lev.label + '\nНазвание: ' + t.title + '\n' +
+        (t.notes ? ('Описание: ' + t.notes + '\n') : '') + (t.due ? ('Срок: ' + t.due + (t.dueTime?(' '+t.dueTime):'') + '\n') : 'Срок: не задан\n') +
+        (t.checklist && t.checklist.length ? ('Чек-лист: ' + t.checklist.map(function(c){ return (c.done?'[x] ':'[ ] ')+c.text; }).join('; ') + '\n') : '') +
+        '\nДай короткий практичный совет (4-6 предложений, без списков): с чего начать сегодня и на что обратить внимание, чтобы задача реально сдвинула доход или порядок в бизнесе. Пиши на русском, по-деловому, без вступлений.';
+      sample(prompt, { signal: currentCtl.signal, cache: refresh ? { gcTime:300000, refresh:true } : true,
+        onText: function(u){ panelBody.classList.remove('thinking'); panelBody.textContent = u.text; }
+      }).then(function(res){ panelStop.hidden = true; panelAsk.hidden = false; if(res.truncated) panelBody.textContent += '\n\n[ответ обрезан]'; })
+      .catch(function(e){ panelStop.hidden = true; panelBody.classList.remove('thinking'); panelAsk.hidden = false;
+        if(e.code==='cancelled'){ panelBody.textContent = e.text || ''; panelAsk.hidden = true; return; }
+        panelBody.textContent = errCopy(e);
+      });
+    }
+    doAsk(false);
+  }
+
+  async function runDigest(){
+    var open = allTasksArr().filter(function(t){ return t.status!=='done'; });
+    openPanel('<i data-feather="sun"></i> Дайджест на сегодня', open.length + ' открытых задач');
+    if(!sample){ panelBody.textContent = 'Функция дайджеста недоступна в этом просмотре.'; return; }
+    if(!open.length){ panelBody.textContent = 'Открытых задач нет — самое время добавить новую цель на день.'; return; }
+    var lines = open.map(function(t){ var proj=(PROJECTS[t.project]||PROJECTS.other).label, lev=(LEVERS[t.lever]||LEVERS.ops).label;
+      return '- [' + proj + ' / ' + lev + '] ' + t.title + (t.due ? (' (срок: ' + t.due + ')') : ' (без срока)'); }).join('\n');
+    var prompt = 'Ты — деловой ассистент владельца трёх бизнесов в России: METALIZM, Принт Бар и Спринтами. Сегодня ' + todayISO() + '. Открытые задачи:\n\n' + lines +
+      '\n\nСоставь короткий утренний дайджест: 1) с чего начать в первую очередь и почему; 2) что просрочено или горит; 3) один совет, как за счёт сегодняшнего дня продвинуться в доходе, а не только закрыть операционку. Пиши на русском, коротко, без списков, 5-8 предложений.';
+    panelStop.hidden = false; panelAsk.hidden = true;
+    if(currentCtl) currentCtl.abort(); currentCtl = new AbortController();
+    panelBody.classList.add('thinking'); panelBody.textContent = 'Клод собирает дайджест…';
+    lastAskFn = function(){ runDigest(); };
+    try{
+      var res = await sample(prompt, { signal: currentCtl.signal, cache: { gcTime: 3600000 },
+        onText: function(u){ panelBody.classList.remove('thinking'); panelBody.textContent = u.text; } });
+      panelStop.hidden = true; panelAsk.hidden = false; if(res.truncated) panelBody.textContent += '\n\n[ответ обрезан]';
+    }catch(e){
+      panelStop.hidden = true; panelBody.classList.remove('thinking'); panelAsk.hidden = false;
+      if(e.code==='cancelled'){ panelBody.textContent = e.text || ''; panelAsk.hidden = true; return; }
+      panelBody.textContent = errCopy(e);
+    }
+  }
+
+  /* ============ task editor modal ============ */
+  var taskOverlay = document.getElementById('taskOverlay');
+  var tfTitle = document.getElementById('tf-title');
+  var tfNotes = document.getElementById('tf-notes');
+  var tfDue = document.getElementById('tf-due');
+  var tfTime = document.getElementById('tf-time');
+  var tfReminder = document.getElementById('tf-reminder');
+  var tfProject = document.getElementById('tf-project');
+  var tfLever = document.getElementById('tf-lever');
+  var tfChecklist = document.getElementById('tf-checklist');
+  var tfChecklistInput = document.getElementById('tf-checklist-input');
+  var tfLinks = document.getElementById('tf-links');
+  var tfLinkLabel = document.getElementById('tf-link-label');
+  var tfLinkUrl = document.getElementById('tf-link-url');
+  var tfFiles = document.getElementById('tf-files');
+  var tfFileInput = document.getElementById('tf-file-input');
+  var tfFileHint = document.getElementById('tf-file-hint');
+  var editingId = null, editingChecklist = [], editingLinks = [], editingAttachments = [], editingProject = 'metalizm', editingLever = 'sales';
+  // The whole task document (title+notes+checklist+links+attachments) is capped at 256 KiB
+  // by the store. Attachments are stored as base64 data URLs, which run ~33% BIGGER than the
+  // original bytes — so every budget below is the real stored-string size, not the file size,
+  // and the total stays well under the document cap to leave room for everything else in it.
+  var MAX_FILE_BYTES = 50000, MAX_FILES = 3, MAX_TOTAL_BYTES = 150000, NON_IMAGE_RAW_PRECHECK = 90000;
+
+  function compressImageToDataUrl(file, maxBytes){
+    return new Promise(function(resolve, reject){
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        URL.revokeObjectURL(url);
+        function attempt(dim, quality){
+          var scale = Math.min(1, dim / Math.max(img.naturalWidth, img.naturalHeight));
+          var w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', quality);
+          return { dataUrl: dataUrl, size: dataUrl.length }; // size = actual stored bytes (the base64 string), not decoded image bytes
+        }
+        var stages = [[1280,0.78],[1024,0.7],[800,0.62],[640,0.55],[480,0.45],[360,0.35]];
+        var i = 0;
+        (function tryNext(){
+          var s = stages[Math.min(i, stages.length-1)];
+          var res = attempt(s[0], s[1]);
+          i++;
+          if(res.size <= maxBytes || i >= stages.length) resolve(res);
+          else tryNext();
+        })();
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('image_load_failed')); };
+      img.src = url;
+    });
+  }
+
+  function renderSeg(container, options, current, attr){
+    container.innerHTML = Object.keys(options).map(function(k){
+      return '<button type="button" data-'+attr+'="'+k+'" class="'+(k===current?'active':'')+'">'+esc(options[k].short||options[k].label)+'</button>';
+    }).join('');
+  }
+  function renderChecklistEditor(){
+    tfChecklist.innerHTML = editingChecklist.map(function(c){
+      return '<div class="checklist-row" data-cid="'+c.id+'">' +
+        '<button type="button" class="task-check cl-check" data-cl-toggle="'+c.id+'"><i data-feather="check"></i></button>' +
+        '<input type="text" value="'+esc(c.text)+'" data-cl-text="'+c.id+'" class="'+(c.done?'cl-done':'')+'" />' +
+        '<button type="button" class="btn-ghost btn btn-icon" data-cl-del="'+c.id+'"><i data-feather="x"></i></button>' +
+      '</div>';
+    }).join('');
+    refreshIcons();
+  }
+
+  function renderLinksEditor(){
+    if(!editingLinks.length){ tfLinks.innerHTML = ''; return; }
+    tfLinks.innerHTML = editingLinks.map(function(l){
+      return '<div class="link-row" data-lid="'+l.id+'">' +
+        '<input type="text" class="lbl" value="'+esc(l.label)+'" data-link-label="'+l.id+'" placeholder="Название" />' +
+        '<input type="text" class="url" value="'+esc(l.url)+'" data-link-url="'+l.id+'" placeholder="https://…" />' +
+        '<button type="button" class="btn-ghost btn btn-icon" data-link-del="'+l.id+'"><i data-feather="x"></i></button>' +
+      '</div>';
+    }).join('');
+    refreshIcons();
+  }
+  function addLink(){
+    var label = tfLinkLabel.value.trim(), url = tfLinkUrl.value.trim();
+    if(!url) return;
+    if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    editingLinks.push({ id: cuid(), label: label || url.replace(/^https?:\/\//,'').split('/')[0], url: url });
+    tfLinkLabel.value=''; tfLinkUrl.value='';
+    renderLinksEditor();
+  }
+  document.getElementById('tf-link-add').addEventListener('click', addLink);
+  tfLinkUrl.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addLink(); } });
+  tfLinks.addEventListener('click', function(e){ var del=e.target.closest('[data-link-del]'); if(!del) return; var id=del.getAttribute('data-link-del'); editingLinks = editingLinks.filter(function(l){ return l.id!==id; }); renderLinksEditor(); });
+  tfLinks.addEventListener('input', function(e){
+    var lb = e.target.closest('[data-link-label]'); var ur = e.target.closest('[data-link-url]');
+    if(lb){ var id1=lb.getAttribute('data-link-label'); editingLinks = editingLinks.map(function(l){ return l.id===id1?Object.assign({},l,{label:lb.value}):l; }); }
+    if(ur){ var id2=ur.getAttribute('data-link-url'); editingLinks = editingLinks.map(function(l){ return l.id===id2?Object.assign({},l,{url:ur.value}):l; }); }
+  });
+
+  function renderFilesEditor(){
+    if(!editingAttachments.length){ tfFiles.innerHTML = ''; }
+    else {
+      tfFiles.innerHTML = editingAttachments.map(function(f){
+        var isImg = f.type && f.type.indexOf('image/')===0;
+        return '<div class="file-row" data-fid="'+f.id+'">' +
+          (isImg ? '<img class="fi-thumb" src="'+f.dataUrl+'" />' : '<span class="fi-icon"><i data-feather="file"></i></span>') +
+          '<span class="fi-name">'+esc(f.name)+'</span>' +
+          '<span class="fi-size">'+fmtBytes(f.size)+'</span>' +
+          '<button type="button" class="btn-ghost btn btn-icon" data-file-del="'+f.id+'"><i data-feather="x"></i></button>' +
+        '</div>';
+      }).join('');
+    }
+    var used = editingAttachments.reduce(function(s,f){ return s+f.size; }, 0);
+    tfFileHint.textContent = editingAttachments.length >= MAX_FILES
+      ? 'Достигнут лимит в ' + MAX_FILES + ' файла — удалите один, чтобы прикрепить другой.'
+      : 'Фото сжимаются автоматически при добавлении. До ' + MAX_FILES + ' файлов на задачу — занято ' + fmtBytes(used) + '.';
+    document.getElementById('tf-file-pick').disabled = editingAttachments.length >= MAX_FILES;
+    refreshIcons();
+  }
+  document.getElementById('tf-file-pick').addEventListener('click', function(){ tfFileInput.click(); });
+  tfFileInput.addEventListener('change', function(){
+    var files = Array.prototype.slice.call(tfFileInput.files || []);
+    (function next(idx){
+      if(idx >= files.length) return;
+      var file = files[idx];
+      if(editingAttachments.length >= MAX_FILES){
+        tfFileHint.textContent = 'Достигнут лимит в ' + MAX_FILES + ' файла — остальное не добавлено.';
+        tfFileHint.style.color = 'var(--danger)';
+        return;
+      }
+      var used = editingAttachments.reduce(function(s,f){ return s+f.size; }, 0);
+      var isImg = file.type && file.type.indexOf('image/') === 0;
+      if(isImg){
+        tfFileHint.style.color = '';
+        tfFileHint.textContent = 'Сжимаю «' + file.name + '»…';
+        compressImageToDataUrl(file, Math.max(20000, Math.min(MAX_FILE_BYTES, MAX_TOTAL_BYTES - used))).then(function(res){
+          if(used + res.size > MAX_TOTAL_BYTES){
+            tfFileHint.textContent = 'Суммарный лимит файлов на задачу исчерпан — удалите файл или дайте ссылку вместо ещё одного фото.';
+            tfFileHint.style.color = 'var(--danger)';
+            next(idx + 1);
+            return;
+          }
+          editingAttachments.push({ id: cuid(), name: file.name.replace(/\.\w+$/, '.jpg'), type: 'image/jpeg', size: res.size, dataUrl: res.dataUrl });
+          renderFilesEditor();
+          next(idx + 1);
+        }).catch(function(){
+          tfFileHint.textContent = 'Не получилось обработать «' + file.name + '» — попробуйте другое фото.';
+          tfFileHint.style.color = 'var(--danger)';
+          next(idx + 1);
+        });
+        return;
+      }
+      if(file.size > NON_IMAGE_RAW_PRECHECK){
+        tfFileHint.textContent = '«' + file.name + '» весит ' + fmtBytes(file.size) + ' — многовато для файла (лимит ~' + fmtBytes(NON_IMAGE_RAW_PRECHECK) + ' для не-фото). Дайте ссылку вместо файла.';
+        tfFileHint.style.color = 'var(--danger)';
+        next(idx + 1);
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(){
+        var storedSize = reader.result.length; // what actually lands in the document — bigger than file.size (base64)
+        if(used + storedSize > MAX_TOTAL_BYTES){
+          tfFileHint.textContent = 'Суммарный лимит файлов на задачу исчерпан — удалите файл или дайте ссылку.';
+          tfFileHint.style.color = 'var(--danger)';
+          next(idx + 1);
+          return;
+        }
+        editingAttachments.push({ id: cuid(), name: file.name, type: file.type || 'application/octet-stream', size: storedSize, dataUrl: reader.result });
+        tfFileHint.style.color = '';
+        renderFilesEditor();
+        next(idx + 1);
+      };
+      reader.onerror = function(){ tfFileHint.textContent = 'Не получилось прочитать «' + file.name + '».'; tfFileHint.style.color = 'var(--danger)'; next(idx + 1); };
+      reader.readAsDataURL(file);
+    })(0);
+    tfFileInput.value = '';
+  });
+  tfFiles.addEventListener('click', function(e){ var del=e.target.closest('[data-file-del]'); if(!del) return; var id=del.getAttribute('data-file-del'); editingAttachments = editingAttachments.filter(function(f){ return f.id!==id; }); renderFilesEditor(); });
+
+  function openTaskEditor(id){
+    editingId = id;
+    var t = id ? state.tasks[id] : null;
+    document.getElementById('taskModalTitle').textContent = t ? 'Изменить задачу' : 'Новая задача';
+    document.getElementById('tf-delete').style.display = t ? '' : 'none';
+    tfTitle.value = t ? t.title : '';
+    tfNotes.value = t ? (t.notes||'') : '';
+    tfDue.value = t ? (t.due||'') : '';
+    tfTime.value = t ? (t.dueTime||'') : '';
+    tfReminder.checked = t ? !!t.reminder : false;
+    editingProject = t ? t.project : 'metalizm';
+    editingLever = t ? t.lever : 'sales';
+    editingChecklist = t && t.checklist ? t.checklist.map(function(c){ return Object.assign({}, c); }) : [];
+    editingLinks = t && t.links ? t.links.map(function(l){ return Object.assign({}, l); }) : [];
+    editingAttachments = t && t.attachments ? t.attachments.map(function(f){ return Object.assign({}, f); }) : [];
+    tfLinkLabel.value=''; tfLinkUrl.value=''; tfFileHint.style.color='';
+    renderSeg(tfProject, PROJECTS, editingProject, 'project');
+    renderSeg(tfLever, LEVERS, editingLever, 'lever');
+    renderChecklistEditor();
+    renderLinksEditor();
+    renderFilesEditor();
+    taskOverlay.hidden = false;
+    refreshIcons();
+    setTimeout(function(){ tfTitle.focus(); }, 30);
+  }
+  function closeTaskEditor(){ taskOverlay.hidden = true; }
+  document.getElementById('taskModalClose').addEventListener('click', closeTaskEditor);
+  document.getElementById('tf-cancel').addEventListener('click', closeTaskEditor);
+  taskOverlay.addEventListener('click', function(e){ if(e.target===taskOverlay) closeTaskEditor(); });
+
+  tfProject.addEventListener('click', function(e){ var b=e.target.closest('[data-project]'); if(!b) return; editingProject=b.getAttribute('data-project'); renderSeg(tfProject, PROJECTS, editingProject, 'project'); refreshIcons(); });
+  tfLever.addEventListener('click', function(e){ var b=e.target.closest('[data-lever]'); if(!b) return; editingLever=b.getAttribute('data-lever'); renderSeg(tfLever, LEVERS, editingLever, 'lever'); refreshIcons(); });
+
+  function addChecklistItem(){
+    var v = tfChecklistInput.value.trim(); if(!v) return;
+    editingChecklist.push({ id: cuid(), text: v, done:false });
+    tfChecklistInput.value = ''; renderChecklistEditor();
+  }
+  document.getElementById('tf-checklist-add').addEventListener('click', addChecklistItem);
+  tfChecklistInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addChecklistItem(); } });
+  tfChecklist.addEventListener('click', function(e){
+    var del = e.target.closest('[data-cl-del]'); var tog = e.target.closest('[data-cl-toggle]');
+    if(del){ var id1=del.getAttribute('data-cl-del'); editingChecklist = editingChecklist.filter(function(c){ return c.id!==id1; }); renderChecklistEditor(); }
+    else if(tog){ var id2=tog.getAttribute('data-cl-toggle'); editingChecklist = editingChecklist.map(function(c){ return c.id===id2 ? Object.assign({},c,{done:!c.done}) : c; }); renderChecklistEditor(); }
+  });
+  tfChecklist.addEventListener('input', function(e){
+    var inp = e.target.closest('[data-cl-text]'); if(!inp) return;
+    var id3 = inp.getAttribute('data-cl-text');
+    editingChecklist = editingChecklist.map(function(c){ return c.id===id3 ? Object.assign({},c,{text:inp.value}) : c; });
+  });
+
+  document.getElementById('tf-save').addEventListener('click', function(){
+    var title = tfTitle.value.trim(); if(!title){ tfTitle.focus(); return; }
+    var payload = {
+      title: title, notes: tfNotes.value.trim(), project: editingProject, lever: editingLever,
+      due: tfDue.value || null, dueTime: tfTime.value || '', reminder: !!tfReminder.checked,
+      checklist: editingChecklist.filter(function(c){ return c.text.trim(); }),
+      links: editingLinks.filter(function(l){ return l.url && l.url.trim(); }),
+      attachments: editingAttachments.slice()
+    };
+    if(editingId){ patchTask(editingId, payload); }
+    else { saveTask(Object.assign({ id: uid(), status:'open', createdAt: Date.now() }, payload)); }
+    closeTaskEditor();
+  });
+  document.getElementById('tf-delete').addEventListener('click', function(){ if(editingId) removeTask(editingId); closeTaskEditor(); });
+
+  /* ============ generic record editor: Продажи / Производство / Склад / Финансы / Документы / Регламенты ============ */
+  var recordOverlay = document.getElementById('recordOverlay');
+  var recordModalTitle = document.getElementById('recordModalTitle');
+  var recordModalSub = document.getElementById('recordModalSub');
+  var recordFields = document.getElementById('recordFields');
+  var recordDeleteBtn = document.getElementById('record-delete');
+  var editingModuleKey = null, editingRecordId = null;
+
+  function fieldInputHtml(f, value){
+    var val = value==null ? '' : value;
+    if(f.type==='select'){
+      return '<select id="rf-'+f.key+'" style="width:100%; border:1px solid var(--border); background:var(--bg); color:var(--ink); border-radius:var(--r-sm); padding:13px 14px; font-size:16px; font-family:Manrope; outline:none; min-height:48px;">' +
+        f.options.map(function(o){ return '<option value="'+esc(o.value)+'" '+(String(val)===String(o.value)?'selected':'')+'>'+esc(o.label)+'</option>'; }).join('') +
+      '</select>';
+    }
+    if(f.type==='textarea'){
+      return '<textarea id="rf-'+f.key+'" placeholder="'+esc(f.placeholder||'')+'" style="'+(f.big?'min-height:220px;':'')+'">'+esc(val)+'</textarea>';
+    }
+    return '<input type="'+(f.type||'text')+'" id="rf-'+f.key+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'')+'" />';
+  }
+  function renderRecordFields(moduleKey, rec){
+    var def = MODULE_DEFS[moduleKey];
+    recordFields.innerHTML = def.fields.map(function(f){
+      return '<div class="field"><label><i data-feather="'+(f.icon||'edit-3')+'"></i> '+esc(f.label)+'</label>' + fieldInputHtml(f, rec ? rec[f.key] : (f.fallback!=null?f.fallback:'')) + '</div>';
+    }).join('');
+    refreshIcons();
+  }
+  function openRecordEditor(moduleKey, id){
+    var def = MODULE_DEFS[moduleKey]; if(!def) return;
+    editingModuleKey = moduleKey; editingRecordId = id;
+    var rec = id ? state.records[moduleKey][id] : null;
+    recordModalTitle.textContent = rec ? ('Изменить запись — ' + def.label) : ('Новая запись — ' + def.label);
+    recordModalSub.textContent = 'Раздел «' + def.label + '»: ' + def.recordNoun;
+    recordDeleteBtn.style.display = rec ? '' : 'none';
+    renderRecordFields(moduleKey, rec);
+    recordOverlay.hidden = false;
+    refreshIcons();
+    setTimeout(function(){ var first = def.fields[0]; var el = document.getElementById('rf-'+first.key); if(el) el.focus(); }, 30);
+  }
+  function closeRecordEditor(){ recordOverlay.hidden = true; editingModuleKey = null; editingRecordId = null; }
+  document.getElementById('recordModalClose').addEventListener('click', closeRecordEditor);
+  document.getElementById('record-cancel').addEventListener('click', closeRecordEditor);
+  recordOverlay.addEventListener('click', function(e){ if(e.target===recordOverlay) closeRecordEditor(); });
+
+  document.getElementById('record-save').addEventListener('click', function(){
+    if(!editingModuleKey) return;
+    var def = MODULE_DEFS[editingModuleKey];
+    var payload = {};
+    var missingRequired = false, firstMissingEl = null;
+    def.fields.forEach(function(f){
+      var el = document.getElementById('rf-'+f.key);
+      if(!el) return;
+      var v = el.value;
+      if(f.required && !String(v||'').trim()){ missingRequired = true; if(!firstMissingEl) firstMissingEl = el; }
+      if(f.type==='number'){ payload[f.key] = v===''? null : Number(v); }
+      else { payload[f.key] = v; }
+    });
+    if(missingRequired){ if(firstMissingEl) firstMissingEl.focus(); return; }
+    if(editingRecordId){ patchRecord(editingModuleKey, editingRecordId, payload); }
+    else { saveRecord(editingModuleKey, Object.assign({ id: uid(), createdAt: Date.now() }, payload)); }
+    closeRecordEditor();
+  });
+  recordDeleteBtn.addEventListener('click', function(){
+    if(editingModuleKey && editingRecordId) removeRecord(editingModuleKey, editingRecordId);
+    closeRecordEditor();
+  });
+
+  /* ============ task workspace: essence + persistent per-task chat ============ */
+  var viewOverlay = document.getElementById('viewOverlay');
+  var wsEyebrow = document.getElementById('wsEyebrow');
+  var wsTitle = document.getElementById('wsTitle');
+  var wsTaskCol = document.getElementById('wsTaskCol');
+  var wsChatBody = document.getElementById('wsChatBody');
+  var wsChatInput = document.getElementById('wsChatInput');
+  var wsChatSend = document.getElementById('wsChatSend');
+  var workspaceOpenId = null;
+  var workspaceChat = {};     // taskId -> [{role, content, _ephemeral?}]
+  var workspaceLoaded = {};   // taskId -> true once loaded from db
+  var wsCtl = null;
+
+  // Per-task chat history lives in task.extra.chat (already loaded with the task via
+  // taskFromApi) and is persisted with a plain extraPatch, rather than a Firestore subcollection.
+  async function loadWorkspaceChat(taskId){
+    if(workspaceLoaded[taskId]) return;
+    var t = state.tasks[taskId];
+    workspaceChat[taskId] = (t && t.extra && Array.isArray(t.extra.chat)) ? t.extra.chat : [];
+    workspaceLoaded[taskId] = true;
+  }
+  function persistWorkspaceChat(taskId){
+    var turns = (workspaceChat[taskId]||[]).filter(function(m){ return !m._ephemeral; }).slice(-40).map(function(m){ return { role:m.role, content:m.content }; });
+    var t = state.tasks[taskId];
+    if(t){ t.extra = t.extra || {}; t.extra.chat = turns; }
+    apiFetch('/tasks/' + taskId, { method:'PATCH', body: { extraPatch: { chat: turns } } }).catch(function(){});
+  }
+
+  function openTaskWorkspace(id){
+    workspaceOpenId = id;
+    viewOverlay.hidden = false;
+    renderWorkspaceLeft(id);
+    wsChatBody.innerHTML = '<div class="ws-loading">Загружаю историю по задаче…</div>';
+    refreshIcons();
+    loadWorkspaceChat(id).then(function(){ if(workspaceOpenId===id) renderWorkspaceChat(id); });
+    setTimeout(function(){ wsChatInput.focus(); }, 30);
+  }
+  function closeTaskWorkspace(){ viewOverlay.hidden = true; workspaceOpenId = null; if(wsCtl) wsCtl.abort(); }
+  document.getElementById('wsClose').addEventListener('click', closeTaskWorkspace);
+  viewOverlay.addEventListener('click', function(e){ if(e.target===viewOverlay) closeTaskWorkspace(); });
+  document.getElementById('ws-edit').addEventListener('click', function(){ var id=workspaceOpenId; closeTaskWorkspace(); if(id) openTaskEditor(id); });
+
+  function renderWorkspaceLeft(id){
+    var t = state.tasks[id];
+    if(!t){ closeTaskWorkspace(); return; }
+    var proj = PROJECTS[t.project] || PROJECTS.other, lev = LEVERS[t.lever] || LEVERS.ops, dc = dueClass(t.due);
+    wsEyebrow.textContent = t.status==='done' ? 'Выполнено' : 'Открыта задача';
+    wsTitle.textContent = t.title;
+
+    var chips = '<div class="view-chips">' +
+      '<span class="chip chip-project">'+esc(proj.short)+'</span>' +
+      '<span class="chip '+lev.cls+'">'+esc(lev.label)+'</span>' +
+      '<span class="chip chip-due '+dc+'"><i data-feather="'+(t.reminder?'bell':'calendar')+'"></i>'+esc(dueLabel(t))+'</span>' +
+    '</div>';
+
+    var descSection = '<div class="view-section"><h4><i data-feather="align-left"></i> Описание</h4>' +
+      (t.notes ? '<div class="view-desc">'+esc(t.notes)+'</div>' : '<div class="view-empty">Без описания — Клод дополнит по ходу разговора.</div>') + '</div>';
+
+    var clSection = '<div class="view-section"><h4><i data-feather="check-square"></i> Чек-лист'+(checklistProgress(t)?(' — '+checklistProgress(t)):'')+'</h4>';
+    if(t.checklist && t.checklist.length){
+      clSection += '<div class="view-checklist">' + t.checklist.map(function(c){
+        return '<div class="view-cl-row '+(c.done?'done':'')+'">' +
+          '<button type="button" class="task-check" data-vcl-toggle="'+c.id+'"><i data-feather="check"></i></button>' +
+          '<span>'+esc(c.text)+'</span>' +
+        '</div>';
+      }).join('') + '</div>';
+    } else { clSection += '<div class="view-empty">Пунктов пока нет.</div>'; }
+    clSection += '</div>';
+
+    var linksSection = '<div class="view-section"><h4><i data-feather="link-2"></i> Ссылки</h4>';
+    if(t.links && t.links.length){
+      linksSection += t.links.map(function(l){ return '<a class="view-link" href="'+esc(l.url)+'" target="_blank" rel="noopener"><i data-feather="external-link"></i>'+esc(l.label||l.url)+'</a>'; }).join('');
+    } else { linksSection += '<div class="view-empty">Ссылок нет.</div>'; }
+    linksSection += '</div>';
+
+    var filesSection = '<div class="view-section"><h4><i data-feather="paperclip"></i> Файлы</h4>';
+    if(t.attachments && t.attachments.length){
+      filesSection += t.attachments.map(function(f){
+        var isImg = f.type && f.type.indexOf('image/')===0;
+        return '<div class="file-row" data-open-file="'+f.id+'" style="cursor:pointer">' +
+          (isImg ? '<img class="fi-thumb" src="'+f.dataUrl+'" />' : '<span class="fi-icon"><i data-feather="file"></i></span>') +
+          '<span class="fi-name">'+esc(f.name)+'</span><span class="fi-size">'+fmtBytes(f.size)+'</span>' +
+        '</div>';
+      }).join('');
+    } else { filesSection += '<div class="view-empty">Файлов нет.</div>'; }
+    filesSection += '</div>';
+
+    wsTaskCol.innerHTML = chips + descSection + clSection + linksSection + filesSection;
+    refreshIcons();
+
+    wsTaskCol.querySelectorAll('[data-vcl-toggle]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var cid = btn.getAttribute('data-vcl-toggle');
+        var task = state.tasks[id]; if(!task) return;
+        var updatedChecklist = (task.checklist||[]).map(function(c){ return c.id===cid ? Object.assign({},c,{done:!c.done}) : c; });
+        patchTask(id, { checklist: updatedChecklist });
+        renderWorkspaceLeft(id);
+      });
+    });
+    wsTaskCol.querySelectorAll('[data-open-file]').forEach(function(row){
+      row.addEventListener('click', function(){
+        var fid = row.getAttribute('data-open-file');
+        var task = state.tasks[id]; if(!task) return;
+        var f = (task.attachments||[]).filter(function(x){ return x.id===fid; })[0];
+        if(f){ try{ window.open(f.dataUrl, '_blank'); }catch(e){} }
+      });
+    });
+  }
+
+  function renderWorkspaceChat(id){
+    var turns = workspaceChat[id] || [];
+    if(!turns.length){
+      wsChatBody.innerHTML = '<div class="ws-kickoff">' +
+        '<p>Клод ещё не работал над этой задачей. Он вникнет в контекст слева, предложит, с чего начать, и будет вести разговор с памятью всей истории по именно этой задаче — по ходу дела сам дополняя описание и чек-лист.</p>' +
+        '<button class="btn btn-sm" id="wsKickoff"><i data-feather="play"></i> Приступить к выполнению</button>' +
+      '</div>';
+      refreshIcons();
+      var kb = document.getElementById('wsKickoff');
+      if(kb) kb.addEventListener('click', function(){ sendWorkspaceMessage(id, 'Приступай к выполнению этой задачи: вникни в контекст, определи ключевое и предложи, с чего начать.'); });
+      return;
+    }
+    wsChatBody.innerHTML = turns.map(function(m){
+      var who = m.role==='user' ? '&gt;' : (m.role==='system' ? '·' : '¤');
+      var cls = m.role==='user' ? 'user' : (m.role==='system' ? 'system' : 'assistant');
+      return '<div class="chat-line '+cls+'"><span class="who">'+who+'</span><span class="txt">'+esc(m.content)+'</span></div>';
+    }).join('');
+    wsChatBody.scrollTop = wsChatBody.scrollHeight;
+  }
+
+  function pushWorkspaceNote(id, text){
+    workspaceChat[id] = workspaceChat[id] || [];
+    workspaceChat[id].push({ role:'system', content:text, _ephemeral:true });
+    if(workspaceOpenId===id) renderWorkspaceChat(id);
+  }
+
+  function taskSnapshotText(t){
+    var proj = PROJECTS[t.project] || PROJECTS.other, lev = LEVERS[t.lever] || LEVERS.ops;
+    return 'Проект: ' + proj.label + '\nРычаг роста: ' + lev.label + '\nНазвание: ' + t.title + '\n' +
+      'Описание: ' + (t.notes || '(пусто)') + '\n' +
+      'Срок: ' + (t.due ? (t.due + (t.dueTime?(' '+t.dueTime):'')) : 'не задан') + '\n' +
+      'Чек-лист: ' + (t.checklist && t.checklist.length ? t.checklist.map(function(c){ return (c.done?'[x] ':'[ ] ')+c.text; }).join('; ') : '(пусто)') + '\n' +
+      'Ссылки: ' + (t.links && t.links.length ? t.links.map(function(l){ return l.label; }).join(', ') : '(нет)') + '\n' +
+      'Файлы: ' + (t.attachments && t.attachments.length ? t.attachments.map(function(f){ return f.name; }).join(', ') : '(нет)');
+  }
+
+  function workspaceTools(id){
+    return [{
+      name: 'update_task',
+      description: 'Обновить эту задачу — заголовок, описание, срок, проект/рычаг и чек-лист. checklist передаётся ЦЕЛИКОМ (полный список пунктов, которые должны остаться) и заменяет прежний. Вызывай по мере того, как проясняется суть задачи, а не только по прямой просьбе.',
+      inputSchema: { type:'object', properties: {
+        title: { type:'string' }, notes: { type:'string' }, due: { type:'string', description:'YYYY-MM-DD или пустая строка' },
+        project: { type:'string', enum:['metalizm','printbar','sprintami','other'] }, lever: { type:'string', enum:['sales','ops','scale'] },
+        checklist: { type:'array', items: { type:'object', properties: { text:{type:'string'}, done:{type:'boolean'} }, required:['text'] } }
+      } },
+      execute: function(input){
+        var patch = {};
+        if(typeof input.title === 'string' && input.title.trim()) patch.title = input.title.slice(0,300);
+        if(typeof input.notes === 'string') patch.notes = input.notes.slice(0,4000);
+        if(typeof input.due === 'string') patch.due = input.due || null;
+        if(input.project && PROJECTS[input.project]) patch.project = input.project;
+        if(input.lever && LEVERS[input.lever]) patch.lever = input.lever;
+        if(Array.isArray(input.checklist)) patch.checklist = input.checklist.map(function(c){ return { id: cuid(), text: String(c.text||'').slice(0,200), done: !!c.done }; });
+        patchTask(id, patch);
+        if(workspaceOpenId===id) renderWorkspaceLeft(id);
+        pushWorkspaceNote(id, '✓ задача дополнена: ' + Object.keys(patch).join(', '));
+        return { ok:true, updated: Object.keys(patch) };
+      }
+    }];
+  }
+
+  async function sendWorkspaceMessage(id, textOverride){
+    var text = textOverride || wsChatInput.value.trim();
+    if(!text) return;
+    if(!textOverride) wsChatInput.value = '';
+
+    workspaceChat[id] = workspaceChat[id] || [];
+    var t = state.tasks[id];
+
+    runChatSend(workspaceChat[id], text, {
+      render: function(){ if(workspaceOpenId===id) renderWorkspaceChat(id); },
+      disabledEphemeral: true,
+      instructions: function(){
+        return 'Ты — Клод, работающий как персональный исполнитель и советник ВНУТРИ ОДНОЙ КОНКРЕТНОЙ ЗАДАЧИ трекера «Верстак» у владельца бизнесов METALIZM (Telegram-бот с ИИ-продажами печати фото на металле), Принт Бар (выездная печать) и Спринтами (типография, широкоформатная печать). ' +
+          'Это не общий чат — весь разговор ниже относится только к этой задаче, и ты помнишь его целиком.\n\n' +
+          'Текущее состояние задачи:\n' + taskSnapshotText(t) + '\n\n' +
+          'Когда пользователь просит начать работу («приступай», «начни выполнять») — вникни в контекст, определи, с чего начать в первую очередь (анализируя, что здесь ключевое), и веди его по задаче шаг за шагом, при нехватке информации — задавай уточняющие вопросы. По мере того как в разговоре проясняются детали, появляются подзадачи или становится понятнее объём работы — САМ обновляй задачу инструментом update_task (дополняй описание, дописывай или переструктурируй чек-лист, уточняй срок), не дожидаясь прямой просьбы: задача должна становиться глубже вместе с разговором. Когда пользователь просто спрашивает совета — отвечай как советник, инструмент вызывать не обязательно. Пиши по-деловому, на русском, без markdown-списков в тексте самого ответа — структурируй через чек-лист инструментом, а не текстом.';
+      },
+      tools: function(){ return workspaceTools(id); },
+      cache: false,
+      getCtl: function(){ return wsCtl; },
+      setCtl: function(c){ wsCtl = c; },
+      persist: function(){ persistWorkspaceChat(id); }
+    });
+  }
+  wsChatSend.addEventListener('click', function(){ sendWorkspaceMessage(workspaceOpenId); });
+  wsChatInput.addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendWorkspaceMessage(workspaceOpenId); } });
+
+  /* ============ terminal chat: Claude captures & manages tasks ============ */
+  var chatToggle = document.getElementById('chatToggle');
+  var chatDrawer = document.getElementById('chatDrawer');
+  var chatBody = document.getElementById('chatBody');
+  var chatInput = document.getElementById('chatInput');
+  var chatSend = document.getElementById('chatSend');
+  var chatTurns = [];   // {role, content} sent to sample()
+  var chatCtl = null;
+
+  chatToggle.addEventListener('click', function(){ chatDrawer.hidden = false; chatToggle.hidden = true; refreshIcons(); renderChat(); chatInput.focus(); });
+  document.getElementById('chatClose').addEventListener('click', function(){ chatDrawer.hidden = true; chatToggle.hidden = false; refreshIcons(); });
+
+  function renderChat(){
+    if(!chatTurns.length){
+      chatBody.innerHTML = '<div class="chat-empty">Опишите дело — Клод сам заведёт задачу и определит проект / рычаг роста. Можно и спросить совета или попросить закрыть задачу.<br><br><b>Например:</b> «Заведи задачу — согласовать смету с Робертом по Седова 24, срок пятница» или «Что делать с задачей про Bitrix24?»</div>';
+      return;
+    }
+    chatBody.innerHTML = chatTurns.map(function(m){
+      var who = m.role==='user' ? '&gt;' : (m.role==='system' ? '·' : '¤');
+      var cls = m.role==='user' ? 'user' : (m.role==='system' ? 'system' : 'assistant');
+      return '<div class="chat-line '+cls+'"><span class="who">'+who+'</span><span class="txt">'+esc(m.content)+'</span></div>';
+    }).join('');
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+  function pushSystemNote(text){
+    chatTurns.push({ role:'system', content:text, _ephemeral:true });
+    renderChat();
+  }
+
+  function chatTaskTools(){
+    return [
+      {
+        name: 'create_task',
+        description: 'Завести новую, уже структурированную задачу: не только название, но и краткое описание сути и, если задача составная — начальный чек-лист шагов. Сразу привязывается к проекту и рычагу роста. Возвращает id созданной задачи.',
+        inputSchema: { type:'object', properties: {
+          title: { type:'string' }, project: { type:'string', enum:['metalizm','printbar','sprintami','other'] },
+          lever: { type:'string', enum:['sales','ops','scale'] }, due: { type:'string', description:'YYYY-MM-DD, необязательно' },
+          notes: { type:'string', description:'краткое описание сути задачи и контекста — заполняй, если из разговора понятна суть' },
+          checklist: { type:'array', description:'начальные шаги, если задача составная — необязательно', items: { type:'object', properties:{ text:{type:'string'} }, required:['text'] } }
+        }, required:['title','project','lever'] },
+        execute: function(input){
+          var t = { id: uid(), title: String(input.title||'').slice(0,300), project: PROJECTS[input.project] ? input.project : 'other',
+            lever: LEVERS[input.lever] ? input.lever : 'ops', due: input.due || null, dueTime:'', reminder:false,
+            notes: input.notes ? String(input.notes).slice(0,1000) : '',
+            checklist: Array.isArray(input.checklist) ? input.checklist.map(function(c){ return { id: cuid(), text: String(c.text||'').slice(0,200), done:false }; }) : [],
+            links: [], attachments: [], status:'open', createdAt: Date.now() };
+          saveTask(t);
+          pushSystemNote('✓ задача создана: «' + t.title + '» → ' + PROJECTS[t.project].short + ' / ' + LEVERS[t.lever].label);
+          return { id: t.id, title: t.title, project: t.project, lever: t.lever };
+        }
+      },
+      {
+        name: 'list_open_tasks',
+        description: 'Список открытых задач пользователя (id, название, проект, рычаг, срок). Используй перед update_task, чтобы найти id по названию.',
+        inputSchema: { type:'object', properties: {} },
+        execute: function(){
+          return allTasksArr().filter(function(t){ return t.status!=='done'; }).map(function(t){
+            return { id:t.id, title:t.title, project:t.project, lever:t.lever, due:t.due||null };
+          });
+        }
+      },
+      {
+        name: 'update_task',
+        description: 'Изменить существующую задачу по id: отметить выполненной, перенести срок, дополнить заметку или переименовать.',
+        inputSchema: { type:'object', properties: {
+          id: { type:'string' }, status: { type:'string', enum:['open','done'] }, due: { type:'string' },
+          notes: { type:'string' }, title: { type:'string' }
+        }, required:['id'] },
+        execute: function(input){
+          var id = String(input.id||'');
+          if(!state.tasks[id]) throw new Error('задача с таким id не найдена — сначала вызови list_open_tasks');
+          var patch = {};
+          if(input.status && (input.status==='open'||input.status==='done')) patch.status = input.status;
+          if(typeof input.due === 'string') patch.due = input.due || null;
+          if(typeof input.notes === 'string') patch.notes = input.notes.slice(0,1000);
+          if(typeof input.title === 'string' && input.title.trim()) patch.title = input.title.slice(0,300);
+          var updated = patchTask(id, patch);
+          pushSystemNote('✓ задача обновлена: «' + updated.title + '»');
+          return { id: id, ok: true };
+        }
+      }
+    ];
+  }
+
+  async function sendChat(){
+    var text = chatInput.value.trim(); if(!text) return;
+    chatInput.value = '';
+
+    var INSTRUCTIONS = 'Ты — Клод, личный бизнес-ассистент владельца METALIZM (Telegram-бот с ИИ-продажами печати фото на металле), ' +
+      'Принт Бар (выездная мобильная печать фото) и Спринтами (типография, широкоформатная печать). Ты работаешь внутри чата трекера задач «Верстак». ' +
+      'Когда пользователь описывает дело, которое нужно сделать — заведи задачу инструментом create_task, не только предлагай словами. ' +
+      'Не ограничивайся голым названием: сразу структурируй задачу — коротко опиши суть и контекст в notes, а если дело составное, из нескольких шагов — заполни начальный checklist. ' +
+      'Когда просит закрыть, перенести срок или изменить существующую задачу — сначала вызови list_open_tasks, найди нужный id по смыслу, затем update_task. ' +
+      'Когда просит совета по задаче — дай короткий практичный совет без инструмента. Подробная работа над одной задачей (погружение, шаги, сбор информации) происходит не здесь, а в окне самой задачи — если пользователь хочет реально поработать над конкретной задачей, предложи открыть её. ' +
+      'Отвечай по-деловому, коротко, на русском, без markdown-списков.';
+
+    runChatSend(chatTurns, text, {
+      render: renderChat,
+      instructions: INSTRUCTIONS,
+      tools: chatTaskTools,
+      getCtl: function(){ return chatCtl; },
+      setCtl: function(c){ chatCtl = c; }
+    });
+  }
+  chatSend.addEventListener('click', sendChat);
+  chatInput.addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); } });
+
+  /* ============ дашборд: встроенный стратегический чат с Клодом ============ */
+  var dashChatBody = document.getElementById('dashChatBody');
+  var dashChatInput = document.getElementById('dashChatInput');
+  var dashChatSend = document.getElementById('dashChatSend');
+  var dashTurns = [];
+  var dashCtl = null;
+
+  function renderDashChat(){
+    if(!dashChatBody) return;
+    if(!dashTurns.length){
+      dashChatBody.innerHTML = '<div class="chat-empty">Спросите, например: «Что сейчас самое узкое место в бизнесе?» или «Какое направление подтянуть в первую очередь?». Клод видит срез всех разделов — задачи, продажи, производство, кассу и цели.</div>';
+      return;
+    }
+    dashChatBody.innerHTML = dashTurns.map(function(m){
+      var who = m.role==='user' ? '&gt;' : (m.role==='system' ? '·' : '¤');
+      var cls = m.role==='user' ? 'user' : (m.role==='system' ? 'system' : 'assistant');
+      return '<div class="chat-line '+cls+'"><span class="who">'+who+'</span><span class="txt">'+esc(m.content)+'</span></div>';
+    }).join('');
+    dashChatBody.scrollTop = dashChatBody.scrollHeight;
+  }
+
+  async function sendDashChat(){
+    if(!dashChatInput) return;
+    var text = dashChatInput.value.trim(); if(!text) return;
+    dashChatInput.value = '';
+
+    var INSTRUCTIONS = function(){
+      return 'Ты — Клод, стратегический бизнес-консультант владельца METALIZM (Telegram-бот с ИИ-продажами печати фото на металле), ' +
+      'Принт Бар (выездная мобильная печать) и Спринтами (типография, широкоформатная печать). Ты работаешь на главном дашборде трекера «Верстак» ' +
+      'и видишь срез данных по всем разделам прямо сейчас:\n\n' + buildBusinessSummaryForAI() + '\n\n' +
+      'Помогай анализировать сильные и слабые стороны бизнеса, отвечай на вопросы о приоритетах, стратегии и операционке, опираясь на эти данные. ' +
+      'Отвечай по-деловому, коротко, на русском, без markdown-списков.';
+    };
+
+    runChatSend(dashTurns, text, {
+      render: renderDashChat,
+      instructions: INSTRUCTIONS,
+      cache: false,
+      getCtl: function(){ return dashCtl; },
+      setCtl: function(c){ dashCtl = c; }
+    });
+  }
+  if(dashChatSend) dashChatSend.addEventListener('click', sendDashChat);
+  if(dashChatInput) dashChatInput.addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendDashChat(); } });
+
+  render();
+  initApp();
+})();
+</script>
+
+</body></html>
