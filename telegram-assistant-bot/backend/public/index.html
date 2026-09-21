@@ -8,6 +8,11 @@
      control-room, per the exact palette/mood the client pinned down —
      so this stays single-theme rather than swapping light/dark. */
   :root{
+    /* Обновляется JS-ом из visualViewport.height — 1% от РЕАЛЬНО видимой высоты экрана,
+       которая у мобильных браузеров/Telegram-WebView не совпадает с обычным vh/dvh,
+       когда открыта системная клавиатура (та просто не уменьшает vh, отчего модалки
+       и чат схлопывались в узкую полоску). calc(var(--app-vh)*N) — надёжная замена Nvh. */
+    --app-vh: 1vh;
     --bg:#0e0e10;
     --surface:#1a1a1d;
     --surface-2:#232327;
@@ -182,7 +187,7 @@
   .view-empty{ font-size:13px; color:var(--ink-faint); }
 
   /* ---- task workspace (task essence + persistent chat) ---- */
-  .workspace-panel{ max-width:1040px; width:94vw; height:88vh; max-height:88vh; }
+  .workspace-panel{ max-width:1040px; width:94vw; height:calc(var(--app-vh, 1vh) * 88); max-height:calc(var(--app-vh, 1vh) * 88); }
   .workspace-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .wh-eyebrow{ font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); display:block; margin-bottom:3px; }
   .workspace-head h2{ margin:0; font-size:17px; max-width:56ch; text-wrap:balance; }
@@ -261,13 +266,13 @@
   /* ---- terminal chat ---- */
   .chat-toggle{ position:fixed; right:22px; bottom:22px; z-index:55; padding:13px 20px 13px 16px; box-shadow:0 14px 34px -12px rgba(0,0,0,.35); }
   .chat-toggle[hidden]{ display:none; }
-  .chat-drawer{ position:fixed; right:22px; bottom:22px; width:400px; max-width:92vw; height:min(560px, 78vh); background:var(--term-bg); color:var(--term-ink); border-radius:var(--r-lg); box-shadow:0 24px 70px -18px rgba(0,0,0,.55); z-index:56; display:flex; flex-direction:column; overflow:hidden; border:1px solid #000; }
+  .chat-drawer{ position:fixed; right:22px; bottom:22px; width:400px; max-width:92vw; height:min(560px, calc(var(--app-vh, 1vh) * 78)); background:var(--term-bg); color:var(--term-ink); border-radius:var(--r-lg); box-shadow:0 24px 70px -18px rgba(0,0,0,.55); z-index:56; display:flex; flex-direction:column; overflow:hidden; border:1px solid #000; }
   .chat-drawer[hidden]{ display:none; }
 
   /* ---- phones: full-screen sheet, bigger everything, no cramped grids ---- */
   @media (max-width: 640px){
     .overlay{ padding:0; align-items:stretch; }
-    .overlay .panel{ max-width:100%; width:100%; height:100dvh; max-height:100dvh; border-radius:0; }
+    .overlay .panel{ max-width:100%; width:100%; height:calc(var(--app-vh, 1vh) * 100); max-height:calc(var(--app-vh, 1vh) * 100); border-radius:0; }
     .panel-head, .workspace-head{ padding:16px; }
     .panel-body{ padding:16px 16px 28px; }
     .panel-foot{ padding:14px 16px calc(14px + max(18px, env(safe-area-inset-bottom))); flex-wrap:wrap; }
@@ -317,7 +322,7 @@
     .task-actions{ gap:0; }
     .chip{ font-size:10px; padding:4px 9px; }
     .chat-toggle{ right:14px; bottom:calc(78px + max(18px, env(safe-area-inset-bottom))); }
-    .chat-drawer{ right:8px; left:8px; width:auto; max-width:none; bottom:calc(72px + max(18px, env(safe-area-inset-bottom))); height:min(66vh, 560px); }
+    .chat-drawer{ right:8px; left:8px; width:auto; max-width:none; bottom:calc(72px + max(18px, env(safe-area-inset-bottom))); height:min(calc(var(--app-vh, 1vh) * 66), 560px); }
     .filter-item{ padding:10px 12px; min-height:40px; }
   }
   .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08); }
@@ -599,6 +604,25 @@
 
   function refreshIcons(){ if(window.feather) window.feather.replace({ 'stroke-width': 2 }); }
 
+  // Держим --app-vh синхронной с РЕАЛЬНО видимой высотой экрана (visualViewport), а не
+  // с полной высотой окна: на телефонах открытая клавиатура не уменьшает window.innerHeight
+  // и vh/dvh вовремя, из-за чего полноэкранные модалки и чат схлопывались в узкую полоску
+  // над клавиатурой. calc(var(--app-vh)*N) в CSS использует именно это значение.
+  function syncAppVh(){
+    var h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    document.documentElement.style.setProperty('--app-vh', (h * 0.01) + 'px');
+  }
+  syncAppVh();
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', syncAppVh);
+    window.visualViewport.addEventListener('scroll', syncAppVh);
+  } else {
+    window.addEventListener('resize', syncAppVh);
+  }
+  if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.onEvent){
+    try{ window.Telegram.WebApp.onEvent('viewportChanged', syncAppVh); }catch(e){}
+  }
+
   var PROJECTS = {
     metalizm:  { label: "METALIZM",  short: "METALIZM",  color: "#c1461f" },
     printbar:  { label: "Принт Бар (выездные принты)", short: "Принт Бар", color: "#2f6f7d" },
@@ -745,6 +769,16 @@
   function utf8ToBase64(str){
     try{ return btoa(unescape(encodeURIComponent(str))); }
     catch(e){ return btoa(str.replace(/[^\x00-\x7F]/g, '?')); }
+  }
+  // Достаём читаемый текст из data: URL файла — используется и просмотрщиком файлов,
+  // и инструментом read_attached_file, которым Клод сам зачитывает прикреплённые файлы.
+  function decodeDataUrlText(dataUrl){
+    var comma = dataUrl.indexOf(',');
+    if(comma===-1) return '';
+    var meta = dataUrl.slice(5, comma), body = dataUrl.slice(comma+1);
+    if(!/;base64/i.test(meta)){ try{ return decodeURIComponent(body); }catch(e){ return body; } }
+    try{ return decodeURIComponent(escape(atob(body))); }
+    catch(e){ try{ return atob(body); }catch(e2){ return ''; } }
   }
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function fmtDate(iso){ if(!iso) return ""; var d = new Date(iso+"T00:00:00"); return d.toLocaleDateString('ru-RU', {day:'numeric', month:'short'}); }
@@ -1175,7 +1209,7 @@
     var count = navBadgeCount(mk);
     return '<button type="button" class="nav-item '+(active?'active ':'')+(extraClass||'')+'" data-action="switch-module" data-key="'+mk+'">' +
       '<i data-feather="'+meta.icon+'"></i><span class="nav-label">'+esc(meta.label)+'</span>' +
-      (count!=null ? '<span class="badge">'+count+'</span>' : '') +
+      (count ? '<span class="badge">'+count+'</span>' : '') +
     '</button>';
   }
   function renderNavRail(){
@@ -2227,9 +2261,57 @@
         var fid = row.getAttribute('data-open-file');
         var task = state.tasks[id]; if(!task) return;
         var f = (task.attachments||[]).filter(function(x){ return x.id===fid; })[0];
-        if(f){ try{ window.open(f.dataUrl, '_blank'); }catch(e){} }
+        if(f) openFileViewer(f);
       });
     });
+  }
+
+  // Просмотр файла ПРЯМО ВНУТРИ приложения — раньше клик открывал data:-ссылку через
+  // window.open, а мобильные браузеры и WebView Telegram такие ссылки в новой вкладке
+  // почти всегда молча блокируют (файл «не открывается»). Модалка ниже работает без
+  // навигации: текстовые форматы показываются как текст, картинки — как картинка.
+  var fileViewerOverlay = null, fileViewerBody = null, fileViewerTitle = null;
+  function ensureFileViewer(){
+    if(fileViewerOverlay) return;
+    fileViewerOverlay = document.createElement('div');
+    fileViewerOverlay.className = 'overlay';
+    fileViewerOverlay.hidden = true;
+    fileViewerOverlay.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-head"><h2 id="fileViewerTitle"></h2>' +
+          '<button type="button" class="btn-ghost btn btn-icon" id="fileViewerClose" aria-label="Закрыть"><i data-feather="x"></i></button>' +
+        '</div>' +
+        '<div class="panel-body" id="fileViewerBody"></div>' +
+      '</div>';
+    document.body.appendChild(fileViewerOverlay);
+    fileViewerBody = document.getElementById('fileViewerBody');
+    fileViewerTitle = document.getElementById('fileViewerTitle');
+    document.getElementById('fileViewerClose').addEventListener('click', function(){ fileViewerOverlay.hidden = true; });
+    fileViewerOverlay.addEventListener('click', function(e){ if(e.target===fileViewerOverlay) fileViewerOverlay.hidden = true; });
+  }
+  function openFileViewer(f){
+    ensureFileViewer();
+    fileViewerTitle.textContent = f.name;
+    var isImg = f.type && f.type.indexOf('image/')===0;
+    var isText = f.type && /^text\/|json/i.test(f.type);
+    if(isImg){
+      fileViewerBody.innerHTML = '';
+      var img = document.createElement('img');
+      img.src = f.dataUrl; img.style.maxWidth = '100%'; img.style.borderRadius = '8px'; img.style.display = 'block';
+      fileViewerBody.appendChild(img);
+    } else if(isText){
+      fileViewerBody.style.whiteSpace = 'pre-wrap';
+      fileViewerBody.style.fontFamily = "'JetBrains Mono'";
+      fileViewerBody.style.fontSize = '12.5px';
+      fileViewerBody.style.lineHeight = '1.6';
+      fileViewerBody.textContent = decodeDataUrlText(f.dataUrl) || '(пустой файл)';
+    } else {
+      fileViewerBody.style.whiteSpace = '';
+      fileViewerBody.style.fontFamily = '';
+      fileViewerBody.innerHTML = '<p>Этот формат («'+esc(f.type||'неизвестный')+'») нельзя показать прямо здесь — на телефоне открыть его как отдельный файл не получится, только на компьютере через выгрузку данных задачи.</p><p>Размер: '+fmtBytes(f.size)+'.</p>';
+    }
+    fileViewerOverlay.hidden = false;
+    refreshIcons();
   }
 
   function renderWorkspaceChat(id){
@@ -2293,7 +2375,7 @@
     },
     {
       name: 'attach_result_file',
-      description: 'Прикрепить к задаче готовый результат работы как файл — он появится во вкладке «Файлы» этой задачи и открывается прямо в приложении по клику. Используй это, когда ты СОБРАЛ или ПОДГОТОВИЛ что-то конкретное и достаточно объёмное по задаче: анализ, сводку данных, черновик текста/КП, план, таблицу, расчёт. Не используй для коротких мыслей или ответов — тем достаточно обычного текста в чате.',
+      description: 'Прикрепить к задаче готовый результат работы как файл — он появится во вкладке «Файлы» этой задачи и открывается прямо в приложении по клику (просмотр внутри приложения, без выхода в браузер). Используй это, когда ты СОБРАЛ или ПОДГОТОВИЛ что-то конкретное и достаточно объёмное по задаче: анализ, сводку данных, черновик текста/КП, план, таблицу, расчёт. Не используй для коротких мыслей или ответов — тем достаточно обычного текста в чате. Само содержимое файла в переписке не сохраняется — если позже пользователь попросит зачитать или напомнить этот файл, используй read_attached_file, а не пересказывай по памяти и НЕ трогай чек-лист.',
       inputSchema: { type:'object', properties: {
         name: { type:'string', description: 'имя файла с расширением, например "анализ-конкурентов.md", "смета.csv", "черновик-кп.txt"' },
         content: { type:'string', description: 'полное содержимое файла целиком, как читаемый текст (markdown/csv/plain — без бинарных форматов)' }
@@ -2313,6 +2395,31 @@
         if(workspaceOpenId===id) renderWorkspaceLeft(id);
         pushWorkspaceNote(id, '✓ файл прикреплён: ' + name);
         return { ok:true, name: name };
+      }
+    },
+    {
+      name: 'read_attached_file',
+      description: 'Прочитать содержимое уже прикреплённого к этой задаче текстового файла (например, того, что сам же приложил через attach_result_file). Используй это ЛЮБОЙ раз, когда пользователь просит зачитать, показать, прислать текстом, напомнить или процитировать содержимое файла — вместо того чтобы гадать по памяти или лезть в чек-лист. После вызова просто перескажи или процитируй полученный текст в обычном ответе.',
+      inputSchema: { type:'object', properties: {
+        name: { type:'string', description: 'имя файла (можно неточное/частичное) — если не указано, берётся последний прикреплённый файл' }
+      } },
+      execute: function(input){
+        var t = state.tasks[id]; if(!t) throw new Error('задача не найдена');
+        var files = t.attachments || [];
+        if(!files.length) throw new Error('к этой задаче ещё не прикреплено ни одного файла');
+        var wanted = String(input.name||'').trim().toLowerCase();
+        var f = null;
+        if(wanted){
+          f = files.filter(function(x){ return x.name.toLowerCase()===wanted; })[0] ||
+              files.filter(function(x){ return x.name.toLowerCase().indexOf(wanted)!==-1; })[0];
+          if(!f) throw new Error('файл с именем похожим на «'+input.name+'» не найден среди: ' + files.map(function(x){ return x.name; }).join(', '));
+        } else {
+          f = files[files.length-1];
+        }
+        if(!(f.type && /^text\/|json/i.test(f.type))) throw new Error('файл «'+f.name+'» не текстовый ('+(f.type||'неизвестный формат')+') — прочитать как текст нельзя');
+        var content = decodeDataUrlText(f.dataUrl);
+        if(!content) throw new Error('не удалось прочитать содержимое файла «'+f.name+'»');
+        return { name: f.name, content: content.slice(0, 20000) };
       }
     }];
   }
@@ -2335,8 +2442,8 @@
           'Текущее состояние задачи:\n' + taskSnapshotText(t) + '\n\n' +
           'Твоя роль здесь — не просто советовать, а РЕАЛЬНО ВЫПОЛНЯТЬ задачу: собирать из разговора и из контекста бизнеса нужные данные, доводить их до готового результата (анализ, расчёт, черновик текста/КП, план, сводка) и отдавать этот результат пользователю. ' +
           'Когда пользователь просит начать работу («приступай», «начни выполнять») — вникни в контекст, определи, с чего начать в первую очередь, и веди его по задаче шаг за шагом, при нехватке информации — задавай уточняющие вопросы. ' +
-          'Как только у тебя готов содержательный результат по задаче (не короткая реплика, а собранный материал: аналитика, свод, черновик, таблица, план) — прикрепи его инструментом attach_result_file, чтобы он остался в задаче как читаемый файл, а не потерялся в переписке. ' +
-          'Заголовок задачи, описание (notes) и срок обновляй инструментом update_task по мере того, как проясняется суть — это можно делать самостоятельно. А вот ЧЕК-ЛИСТ (checklist) в update_task трогай ТОЛЬКО когда пользователь сам явно просит завести, изменить или структурировать шаги/чек-лист — не переписывай и не дополняй его по своей инициативе. ' +
+          'Как только у тебя готов содержательный результат по задаче (не короткая реплика, а собранный материал: аналитика, свод, черновик, таблица, план) — прикрепи его инструментом attach_result_file, чтобы он остался в задаче как читаемый файл, а не потерялся в переписке. Само содержимое файла потом не хранится у тебя в памяти разговора — если пользователь попросит зачитать, показать или напомнить, что в файле, ВСЕГДА вызывай read_attached_file и цитируй/пересказывай полученный текст. Такие просьбы (зачитай, покажи, что там написано, напомни) — это НИКОГДА не повод трогать чек-лист или update_task, даже если ты не сразу понял, что именно нужно показать. ' +
+          'Заголовок задачи, описание (notes) и срок обновляй инструментом update_task по мере того, как проясняется суть — это можно делать самостоятельно. А вот ЧЕК-ЛИСТ (checklist) в update_task трогай ТОЛЬКО когда пользователь сам явно просит завести, изменить или структурировать шаги/чек-лист — не переписывай и не дополняй его по своей инициативе и не используй его как замену прямому ответу на вопрос. ' +
           'Когда пользователь просто спрашивает совета — отвечай как советник, без инструментов. Пиши по-деловому, на русском, без markdown-списков в тексте самого ответа.';
       },
       tools: function(){ return workspaceTools(id); },
