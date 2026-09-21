@@ -32,6 +32,7 @@ model Workspace {
   updatedAt DateTime @updatedAt
 
   users User[]
+  tasks Task[]
 
   @@map("workspaces")
 }
@@ -76,4 +77,48 @@ model AgentMessage {
 
   @@index([userId, agentKey, createdAt])
   @@map("agent_messages")
+}
+
+enum TaskProject {
+  METALIZM
+  PRINTBAR
+  SPRINTAMI
+  OTHER
+}
+
+enum TaskLever {
+  SALES
+  OPS
+  SCALE
+}
+
+enum TaskStatus {
+  NEW
+  IN_PROGRESS
+  DONE
+}
+
+// Задача верстака. Может быть создана человеком или ИИ-агентом
+// (через tool use в разговоре с агентом) — createdByAgentKey хранит
+// ключ агента, если задачу создал он; null означает, что создал человек.
+model Task {
+  id          String      @id @default(cuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+
+  title       String
+  description String?
+  project     TaskProject @default(OTHER)
+  lever       TaskLever?
+  status      TaskStatus  @default(NEW)
+  dueDate     DateTime?
+  checklist   Json?       // [{ text: string, done: boolean }]
+
+  createdByAgentKey String? // "designer" | "financier" | "lawyer" | "marketer" | null = человек
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@map("tasks")
 }
