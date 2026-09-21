@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 import { verifyTelegramInitData } from "../telegramAuth.js";
 import { issueSessionToken } from "../jwt.js";
 import { env } from "../env.js";
+import { seedKnowledgeIfEmpty } from "../seedKnowledge.js";
 
 /**
  * POST /auth/telegram
@@ -68,6 +69,15 @@ export async function authRoutes(app: FastifyInstance) {
           lastSeenAt: new Date(),
         },
       });
+    }
+
+    // Заводим первые записи «Базы знаний», если её ещё никто не заполнял —
+    // и для только что созданного воркспейса, и для уже существующего (если
+    // фича раскатана позже первого входа). Не блокирует вход при сбое.
+    try {
+      await seedKnowledgeIfEmpty(user.workspaceId);
+    } catch (err) {
+      request.log.error(err, "seedKnowledgeIfEmpty failed");
     }
 
     const token = issueSessionToken({
