@@ -102,3 +102,5 @@ export async function recordsRoutes(app: FastifyInstance) {
     return reply.code(204).send();
   });
 }
+
+// noop
