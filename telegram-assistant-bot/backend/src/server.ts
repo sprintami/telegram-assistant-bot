@@ -5,6 +5,7 @@ import { authRoutes } from "./routes/auth.js";
 import { meRoutes } from "./routes/me.js";
 import { agentsRoutes } from "./routes/agents.js";
 import { tasksRoutes } from "./routes/tasks.js";
+import { chatRoutes } from "./routes/chat.js";
 
 const app = Fastify({ logger: true });
 
@@ -18,6 +19,7 @@ await app.register(authRoutes);
 await app.register(meRoutes);
 await app.register(agentsRoutes);
 await app.register(tasksRoutes);
+await app.register(chatRoutes);
 
 app.listen({ port: env.PORT, host: "0.0.0.0" }).then(() => {
   console.log(`Верстак-бэкенд запущен на порту ${env.PORT}`);
