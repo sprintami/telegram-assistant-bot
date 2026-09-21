@@ -65,6 +65,7 @@ export async function agentsRoutes(app: FastifyInstance) {
       replyText = await askAgent(
         agent.systemPrompt,
         history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+        { workspaceId: session.workspaceId, agentKey: key },
       );
     } catch (err) {
       app.log.error(err);
