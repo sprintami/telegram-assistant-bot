@@ -193,11 +193,20 @@
   .workspace-head h2{ margin:0; font-size:17px; max-width:56ch; text-wrap:balance; }
   .wh-actions{ display:flex; gap:8px; align-items:center; flex-shrink:0; }
   .workspace-body{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:20px; min-height:0; padding:20px; background:var(--surface); }
-  @media (max-width:760px){ .workspace-body{ grid-template-columns:1fr; grid-template-rows:auto 1fr; gap:14px; padding:14px; } .ws-col-task{ max-height:34vh; } }
+  @media (max-width:760px){ .workspace-body{ grid-template-columns:1fr; grid-template-rows:auto 1fr; gap:14px; padding:14px; } .ws-col-task{ max-height:34vh; } .ws-chat-back{ display:inline-flex !important; } }
   .ws-col-task{ padding:0 2px 0 0; overflow-y:auto; }
   .ws-col-chat{ display:flex; flex-direction:column; background:var(--term-bg); color:var(--term-ink); min-height:0; border-radius:var(--r-md); overflow:hidden; box-shadow:0 14px 34px -16px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05); }
   .ws-chat-body{ flex:1; overflow-y:auto; padding:16px; font-family:'JetBrains Mono'; font-size:12.5px; line-height:1.6; display:flex; flex-direction:column; gap:12px; }
   .ws-chat-head{ display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.08); font-family:'JetBrains Mono'; font-size:11.5px; color:#c9bda6; flex-shrink:0; }
+  /* Кнопка «Назад к задаче» — на телефоне, когда открыта клавиатура и активна переписка
+     с ИИ, единственным доступным действием раньше был крестик «Закрыть», который сносит
+     всю карточку задачи целиком, а не просто убирает клавиатуру/скроллит назад к задаче.
+     Эта кнопка — ненавязчивый способ вернуться к деталям задачи, ничего не закрывая.
+     На десктопе она не нужна (обе колонки видны одновременно), поэтому скрыта по умолчанию
+     и включается только в мобильном медиа-запросе выше. */
+  .ws-chat-back{ display:none; background:transparent; border:1px solid rgba(255,255,255,.14); color:#c9bda6; width:26px; height:26px; border-radius:7px; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; }
+  .ws-chat-back svg{ width:14px; height:14px; }
+  .ws-chat-back:active{ background:rgba(255,255,255,.08); }
   .ws-chat-head .dots{ display:flex; gap:6px; }
   .ws-chat-head .dots span{ width:8px; height:8px; border-radius:50%; display:inline-block; }
   .ws-chat-head .dots span:nth-child(1){ background:#e2685a; }
@@ -561,7 +570,10 @@
     <div class="workspace-body">
       <div class="ws-col-task" id="wsTaskCol"></div>
       <div class="ws-col-chat">
-        <div class="ws-chat-head"><span class="dots"><span></span><span></span><span></span></span><span><i data-feather="terminal"></i> клод@задача</span></div>
+        <div class="ws-chat-head">
+          <button type="button" class="ws-chat-back" id="wsChatBack" aria-label="Назад к задаче"><i data-feather="arrow-left"></i></button>
+          <span class="dots"><span></span><span></span><span></span></span><span><i data-feather="terminal"></i> клод@задача</span>
+        </div>
         <div class="ws-chat-body" id="wsChatBody"></div>
         <div class="ws-chat-foot">
           <textarea id="wsChatInput" rows="1" placeholder="Спросите совета или напишите «приступай»…"></textarea>
@@ -2238,6 +2250,15 @@
   document.getElementById('wsClose').addEventListener('click', closeTaskWorkspace);
   viewOverlay.addEventListener('click', function(e){ if(e.target===viewOverlay) closeTaskWorkspace(); });
   document.getElementById('ws-edit').addEventListener('click', function(){ var id=workspaceOpenId; closeTaskWorkspace(); if(id) openTaskEditor(id); });
+  // «Назад к задаче» — убирает клавиатуру и прокручивает к деталям задачи, НЕ закрывая
+  // саму карточку. Раньше единственным действием рядом с чатом был крестик «Закрыть»,
+  // который по привычке нажимали на автомате — а он сносит всю задачу целиком.
+  document.getElementById('wsChatBack').addEventListener('click', function(){
+    wsChatInput.blur();
+    var col = document.getElementById('wsTaskCol');
+    if(col && col.scrollIntoView) col.scrollIntoView({ behavior:'smooth', block:'start' });
+    try{ window.scrollTo({ top:0, behavior:'smooth' }); }catch(e){ window.scrollTo(0,0); }
+  });
 
   function renderWorkspaceLeft(id){
     var t = state.tasks[id];
