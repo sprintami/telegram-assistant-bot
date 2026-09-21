@@ -10,12 +10,16 @@ function applyTelegramTheme() {
   const text = theme.text_color ?? "#111111";
   const hint = theme.hint_color ?? "#707579";
   const cardBg = theme.secondary_bg_color ?? "rgba(127,127,127,0.08)";
+  const button = theme.button_color ?? "#2ea6ff";
+  const buttonText = theme.button_text_color ?? "#ffffff";
 
   const root = document.documentElement;
   root.style.setProperty("--tg-bg", bg);
   root.style.setProperty("--tg-text", text);
   root.style.setProperty("--tg-hint", hint);
   root.style.setProperty("--tg-card-bg", cardBg);
+  root.style.setProperty("--tg-button", button);
+  root.style.setProperty("--tg-button-text", buttonText);
 
   // Явно задаём фон/текст страницы под текущую тему Telegram,
   // чтобы текст не сливался с фоном в тёмной теме.
