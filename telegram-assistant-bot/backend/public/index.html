@@ -270,7 +270,7 @@
     .overlay .panel{ max-width:100%; width:100%; height:100dvh; max-height:100dvh; border-radius:0; }
     .panel-head, .workspace-head{ padding:16px; }
     .panel-body{ padding:16px 16px 28px; }
-    .panel-foot{ padding:14px 16px calc(14px + env(safe-area-inset-bottom)); flex-wrap:wrap; }
+    .panel-foot{ padding:14px 16px calc(14px + max(18px, env(safe-area-inset-bottom))); flex-wrap:wrap; }
     .panel-foot .btn{ flex:1 1 auto; justify-content:center; min-height:46px; }
     .row2{ grid-template-columns:1fr; }
     .row3{ grid-template-columns:1fr; }
@@ -285,7 +285,7 @@
 
     /* ---- persistent nav becomes a bottom tab bar on a phone screen ---- */
     .nav-rail{ top:auto; left:0; right:0; bottom:0; width:auto; height:auto; flex-direction:row; align-items:stretch;
-      border-right:none; border-top:1px solid var(--border); padding:4px 2px calc(4px + env(safe-area-inset-bottom)); gap:0; overflow:visible; z-index:50; justify-content:space-between; }
+      border-right:none; border-top:1px solid var(--border); padding:4px 2px calc(4px + max(18px, env(safe-area-inset-bottom))); gap:0; overflow:visible; z-index:50; justify-content:space-between; }
     .nav-brand{ display:none; }
     .nav-item{ flex-direction:column; gap:4px; padding:8px 6px; font-size:9.5px; flex:1 1 0; min-height:50px; justify-content:center; width:auto; text-align:center; }
     .nav-item .nav-label{ flex:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -293,14 +293,14 @@
     .nav-item{ position:relative; }
     .nav-item.nav-item-secondary{ display:none; }
     .nav-more-btn{ display:flex; }
-    .nav-more-sheet{ position:fixed; left:8px; right:8px; bottom:calc(66px + env(safe-area-inset-bottom)); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:0 -14px 40px -14px rgba(0,0,0,.35); z-index:51; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .nav-more-sheet{ position:fixed; left:8px; right:8px; bottom:calc(66px + max(18px, env(safe-area-inset-bottom))); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:0 -14px 40px -14px rgba(0,0,0,.35); z-index:51; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
     .nav-more-sheet .nav-item{ flex-direction:row; justify-content:flex-start; gap:10px; font-size:13px; min-height:46px; border-radius:var(--r-sm); text-align:left; }
     .nav-more-sheet .nav-item .nav-label{ flex:1; white-space:normal; }
     .nav-more-backdrop{ display:block; position:fixed; inset:0; z-index:49; background:transparent; }
     .nav-more-sheet[hidden], .nav-more-backdrop[hidden]{ display:none; }
 
     /* ---- main dashboard shell on a phone screen ---- */
-    #app{ margin-left:0; padding:calc(18px + env(safe-area-inset-top)) 14px 120px; }
+    #app{ margin-left:0; padding:calc(18px + env(safe-area-inset-top)) 14px 132px; }
     .topbar{ flex-direction:column; align-items:stretch; gap:14px; padding-bottom:18px; margin-bottom:18px; }
     h1{ font-size:23px; }
     .sub{ max-width:none; }
@@ -316,8 +316,8 @@
     .task-title{ font-size:14px; }
     .task-actions{ gap:0; }
     .chip{ font-size:10px; padding:4px 9px; }
-    .chat-toggle{ right:14px; bottom:calc(78px + env(safe-area-inset-bottom)); }
-    .chat-drawer{ right:8px; left:8px; width:auto; max-width:none; bottom:calc(72px + env(safe-area-inset-bottom)); height:min(66vh, 560px); }
+    .chat-toggle{ right:14px; bottom:calc(78px + max(18px, env(safe-area-inset-bottom))); }
+    .chat-drawer{ right:8px; left:8px; width:auto; max-width:none; bottom:calc(72px + max(18px, env(safe-area-inset-bottom))); height:min(66vh, 560px); }
     .filter-item{ padding:10px 12px; min-height:40px; }
   }
   .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08); }
