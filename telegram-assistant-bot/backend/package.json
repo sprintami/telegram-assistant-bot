@@ -1,30 +1,30 @@
 {
-  "name": "verstak-backend",
-  "version": "0.1.0",
-  "description": "Верстак — бэкенд P0: Workspace/User, авторизация через Telegram (Mini App initData), Postgres + Prisma, чат с ИИ-агентами. Отдельный сервис на Railway внутри репозитория telegram-assistant-bot.",
-  "main": "dist/server.js",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "prisma generate && tsc",
-    "start": "node dist/server.js",
-    "prisma:migrate": "prisma migrate deploy",
-    "prisma:migrate:dev": "prisma migrate dev"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.1",
-    "openai": "^4.68.0",
-    "@prisma/client": "^5.20.0",
-    "fastify": "^4.28.1",
-    "@fastify/cors": "^9.0.1",
-    "jsonwebtoken": "^9.0.2",
-    "dotenv": "^16.4.5"
-  },
-  "devDependencies": {
-    "prisma": "^5.20.0",
-    "typescript": "^5.6.3",
-    "tsx": "^4.19.1",
-    "@types/node": "^22.7.5",
-    "@types/jsonwebtoken": "^9.0.7"
-  }
+    "name": "verstak-backend",
+    "version": "0.1.0",
+    "description": "Верстак — настоящий сайт (не артефакт Claude): Workspace/User, авторизация через Telegram (Mini App initData), Postgres + Prisma, чат с единым ассистентом (ChatGPT), и сам фронтенд (public/) отдаётся этим же сервисом. Отдельный сервис на Railway внутри репозитория telegram-assistant-bot.",
+    "main": "dist/server.js",
+    "type": "module",
+    "scripts": {
+          "dev": "tsx watch src/server.ts",
+          "build": "prisma generate && tsc",
+          "start": "node dist/server.js",
+          "prisma:migrate": "prisma migrate deploy",
+          "prisma:migrate:dev": "prisma migrate dev"
+    },
+    "dependencies": {
+          "openai": "^4.68.0",
+          "@prisma/client": "^5.20.0",
+          "fastify": "^4.28.1",
+          "@fastify/cors": "^9.0.1",
+          "@fastify/static": "^7.0.4",
+          "jsonwebtoken": "^9.0.2",
+          "dotenv": "^16.4.5"
+    },
+    "devDependencies": {
+          "prisma": "^5.20.0",
+          "typescript": "^5.6.3",
+          "tsx": "^4.19.1",
+          "@types/node": "^22.7.5",
+          "@types/jsonwebtoken": "^9.0.7"
+    }
 }
