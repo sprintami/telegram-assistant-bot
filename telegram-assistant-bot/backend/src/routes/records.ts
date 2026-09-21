@@ -17,6 +17,7 @@ const VALID_MODULES = [
   "documents",
   "regulations",
   "goals",
+  "knowledge",
 ];
 
 function toApi(row: { id: string; data: unknown }) {
