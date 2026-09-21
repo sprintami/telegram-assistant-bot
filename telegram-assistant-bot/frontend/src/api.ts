@@ -13,6 +13,20 @@ export interface MeResponse {
   };
 }
 
+export interface AgentInfo {
+  key: string;
+  name: string;
+  emoji: string;
+  tagline: string;
+}
+
+export interface AgentMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -28,6 +42,24 @@ function baseUrl(): string {
     );
   }
   return API_URL.replace(/\/$/, "");
+}
+
+async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${baseUrl()}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new ApiError(res.status, data?.error ?? "Что-то пошло не так");
+  }
+
+  return data as T;
 }
 
 export async function loginWithTelegram(
@@ -49,15 +81,25 @@ export async function loginWithTelegram(
 }
 
 export async function fetchMe(token: string): Promise<MeResponse> {
-  const res = await fetch(`${baseUrl()}/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+  return request<MeResponse>("/me", token);
+}
+
+export async function fetchAgents(token: string): Promise<AgentInfo[]> {
+  return request<AgentInfo[]>("/agents", token);
+}
+
+export async function fetchAgentMessages(token: string, agentKey: string): Promise<AgentMessage[]> {
+  return request<AgentMessage[]>(`/agents/${agentKey}/messages`, token);
+}
+
+export async function sendAgentMessage(
+  token: string,
+  agentKey: string,
+  content: string,
+): Promise<{ userMessage: AgentMessage; assistantMessage: AgentMessage }> {
+  return request(`/agents/${agentKey}/messages`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
   });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new ApiError(res.status, data?.error ?? "Не удалось получить профиль");
-  }
-
-  return data as MeResponse;
 }
