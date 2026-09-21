@@ -746,6 +746,14 @@
         { key:"status", label:"Статус", icon:"activity", type:"select", options:optionsFromMap(GOAL_STATUS), fallback:"active" },
         { key:"notes", label:"Заметки", icon:"align-left", type:"textarea" }
       ]
+    },
+    knowledge: {
+      label: "База знаний", icon: "book", collection: "knowledge", recordNoun: "запись",
+      fields: [
+        { key:"title", label:"Тема", icon:"book", type:"text", required:true, placeholder:"Например: Ценности METALIZM" },
+        { key:"category", label:"Раздел", icon:"tag", type:"text", placeholder:"О бизнесе / Обо мне / Клиенты / Продукт…" },
+        { key:"body", label:"Текст", icon:"align-left", type:"textarea", big:true, placeholder:"Факты, которые должен знать ИИ-ассистент" }
+      ]
     }
   };
   var MODULE_ORDER = ["dashboard","tasks","sales","production","revenue","documents"];
@@ -761,7 +769,8 @@
   var DOC_SUBTABS = [
     { key:"documents",   label:"Договоры",       icon:"file-text" },
     { key:"regulations", label:"Регламенты",     icon:"book-open" },
-    { key:"goals",       label:"Цели компании",  icon:"flag" }
+    { key:"goals",       label:"Цели компании",  icon:"flag" },
+    { key:"knowledge",   label:"База знаний",    icon:"book" }
   ];
 
   function uid(){ return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -1424,14 +1433,32 @@
       '</div>' +
     '</div>';
   }
-  var MODULE_ROW_RENDERERS = { finance:financeRow, documents:documentRow, regulations:regulationRow, goals:goalRow };
+  function knowledgeRow(r){
+    var preview = (r.body||'').slice(0,120);
+    return '<div class="task" data-id="'+r.id+'">' +
+      '<span class="task-check" style="cursor:default; border-color:transparent; background:transparent"><i data-feather="book" style="width:16px;height:16px;color:var(--ink-faint)"></i></span>' +
+      '<div>' +
+        '<div class="task-title" data-action="edit-record" data-module="knowledge" data-id="'+r.id+'">'+esc(r.title)+'</div>' +
+        (preview ? '<div class="task-notes">'+esc(preview)+(r.body&&r.body.length>120?'…':'')+'</div>' : '') +
+        '<div class="task-meta">' +
+          (r.category ? '<span class="chip chip-project">'+esc(r.category)+'</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn btn-ghost btn-icon" data-action="edit-record" data-module="knowledge" data-id="'+r.id+'" title="Редактировать"><i data-feather="edit-3"></i></button>' +
+        '<button class="btn btn-ghost btn-icon" data-action="del-record" data-module="knowledge" data-id="'+r.id+'" title="Удалить"><i data-feather="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }
+  var MODULE_ROW_RENDERERS = { finance:financeRow, documents:documentRow, regulations:regulationRow, goals:goalRow, knowledge:knowledgeRow };
   var MODULE_INTROS = {
     sales: "Заявки и клиенты — от первого касания до передачи в цех.",
     production: "Что сейчас в работе в цехах и на каком этапе.",
     finance: "Простая касса: приходы и расходы по направлениям.",
     documents: "Договоры, прайсы и другие бумаги — под рукой.",
     regulations: "Как у нас принято делать — чтобы не держать в голове.",
-    goals: "Куда движется бизнес и как мы это измеряем."
+    goals: "Куда движется бизнес и как мы это измеряем.",
+    knowledge: "Факты о бизнесе и о владельце — автоматически попадают в контекст всех ИИ-чатов Верстака."
   };
 
   function renderRecordList(moduleKey){
@@ -1513,6 +1540,16 @@
     if(!docs.length) return 'Сохранённых документов пока нет.';
     return docs.map(function(d){ return '- ' + d.title + (d.category ? (' ('+d.category+')') : ''); }).join('\n');
   }
+  // Факты, которые владелец сам занёс в раздел «База знаний» — сильнее общих
+  // знаний из BUSINESS_CONTEXT по умолчанию, поэтому подмешиваются везде, где
+  // используется BUSINESS_CONTEXT (см. fullBusinessContext ниже).
+  function buildKnowledgeContext(){
+    var items = recordsArr('knowledge');
+    if(!items.length) return '';
+    return '\n\nДополнительная база знаний, которую владелец сам заполнил в разделе «База знаний» (используй как источник истины — это точнее и новее, чем общие знания выше):\n' +
+      items.map(function(r){ return '— ' + (r.category ? ('['+r.category+'] ') : '') + r.title + (r.body ? (': ' + r.body) : ''); }).join('\n');
+  }
+  function fullBusinessContext(){ return BUSINESS_CONTEXT + buildKnowledgeContext(); }
 
   function renderDashboardBody(){
     var hs = headlineStats();
@@ -1733,7 +1770,10 @@
           var result;
           try{
             var args = {}; try{ args = tc.arguments ? JSON.parse(tc.arguments) : {}; }catch(pe){ args = {}; }
-            result = tool ? tool.execute(args) : { error: 'unknown tool: ' + tc.name };
+            // await работает и для обычного синхронного execute() (просто резолвится сразу),
+            // и для нового generate_image, чей execute() ходит на бэкенд за картинкой и
+            // возвращает промис — без await он бы улетел в JSON.stringify как пустой объект.
+            result = tool ? await tool.execute(args) : { error: 'unknown tool: ' + tc.name };
           }catch(execErr){
             result = { error: (execErr && execErr.message) || String(execErr) };
           }
@@ -2421,6 +2461,31 @@
         if(!content) throw new Error('не удалось прочитать содержимое файла «'+f.name+'»');
         return { name: f.name, content: content.slice(0, 20000) };
       }
+    },
+    {
+      name: 'generate_image',
+      description: 'Сгенерировать изображение по текстовому описанию (иллюстрация, визуал, мокап, баннер, референс для дизайна) и прикрепить его к задаче как файл — открывается прямо в приложении по клику. Используй, когда пользователь просит нарисовать, сгенерировать картинку, показать визуал/мокап/баннер.',
+      inputSchema: { type:'object', properties: {
+        prompt: { type:'string', description:'подробное описание изображения — стиль, объекты, композиция, цвета' },
+        name: { type:'string', description:'имя файла, например "мокап-баннера.png" (необязательно)' }
+      }, required:['prompt'] },
+      execute: function(input){
+        var prompt = String(input.prompt||'').trim();
+        if(!prompt) throw new Error('prompt пуст — нечего рисовать');
+        var name = String(input.name||'изображение.png').trim().slice(0,150) || 'изображение.png';
+        if(!/\.(png|jpe?g)$/i.test(name)) name += '.png';
+        return apiFetch('/image', { method:'POST', body: { prompt: prompt } }).then(function(res){
+          if(!res || !res.b64) throw new Error('не удалось получить изображение от сервиса генерации');
+          var dataUrl = 'data:image/png;base64,' + res.b64;
+          var t = state.tasks[id]; if(!t) throw new Error('задача не найдена');
+          var attachments = (t.attachments || []).slice();
+          attachments.push({ id: cuid(), name: name, type: 'image/png', size: res.b64.length, dataUrl: dataUrl });
+          patchTask(id, { attachments: attachments });
+          if(workspaceOpenId===id) renderWorkspaceLeft(id);
+          pushWorkspaceNote(id, '✓ изображение сгенерировано: ' + name);
+          return { ok:true, name: name };
+        });
+      }
     }];
   }
 
@@ -2437,12 +2502,12 @@
       disabledEphemeral: true,
       instructions: function(){
         return 'Ты — Клод, работающий как персональный ИСПОЛНИТЕЛЬ ВНУТРИ ОДНОЙ КОНКРЕТНОЙ ЗАДАЧИ трекера «Верстак». ' +
-          BUSINESS_CONTEXT + '\n\n' +
+          fullBusinessContext() + '\n\n' +
           'Это не общий чат — весь разговор ниже относится только к этой задаче, и ты помнишь его целиком.\n\n' +
           'Текущее состояние задачи:\n' + taskSnapshotText(t) + '\n\n' +
           'Твоя роль здесь — не просто советовать, а РЕАЛЬНО ВЫПОЛНЯТЬ задачу: собирать из разговора и из контекста бизнеса нужные данные, доводить их до готового результата (анализ, расчёт, черновик текста/КП, план, сводка) и отдавать этот результат пользователю. ' +
           'Когда пользователь просит начать работу («приступай», «начни выполнять») — вникни в контекст, определи, с чего начать в первую очередь, и веди его по задаче шаг за шагом, при нехватке информации — задавай уточняющие вопросы. ' +
-          'Как только у тебя готов содержательный результат по задаче (не короткая реплика, а собранный материал: аналитика, свод, черновик, таблица, план) — прикрепи его инструментом attach_result_file, чтобы он остался в задаче как читаемый файл, а не потерялся в переписке. Само содержимое файла потом не хранится у тебя в памяти разговора — если пользователь попросит зачитать, показать или напомнить, что в файле, ВСЕГДА вызывай read_attached_file и цитируй/пересказывай полученный текст. Такие просьбы (зачитай, покажи, что там написано, напомни) — это НИКОГДА не повод трогать чек-лист или update_task, даже если ты не сразу понял, что именно нужно показать. ' +
+          'Как только у тебя готов содержательный результат по задаче (не короткая реплика, а собранный материал: аналитика, свод, черновик, таблица, план) — прикрепи его инструментом attach_result_file, чтобы он остался в задаче как читаемый файл, а не потерялся в переписке. Если по задаче нужна картинка (визуал, мокап, баннер, иллюстрация, референс) — используй инструмент generate_image, он сам сгенерирует и прикрепит изображение файлом. Само содержимое файла потом не хранится у тебя в памяти разговора — если пользователь попросит зачитать, показать или напомнить, что в файле, ВСЕГДА вызывай read_attached_file и цитируй/пересказывай полученный текст. Такие просьбы (зачитай, покажи, что там написано, напомни) — это НИКОГДА не повод трогать чек-лист или update_task, даже если ты не сразу понял, что именно нужно показать. ' +
           'Заголовок задачи, описание (notes) и срок обновляй инструментом update_task по мере того, как проясняется суть — это можно делать самостоятельно. А вот ЧЕК-ЛИСТ (checklist) в update_task трогай ТОЛЬКО когда пользователь сам явно просит завести, изменить или структурировать шаги/чек-лист — не переписывай и не дополняй его по своей инициативе и не используй его как замену прямому ответу на вопрос. ' +
           'Когда пользователь просто спрашивает совета — отвечай как советник, без инструментов. Пиши по-деловому, на русском, без markdown-списков в тексте самого ответа.';
       },
@@ -2544,7 +2609,7 @@
     var text = chatInput.value.trim(); if(!text) return;
     chatInput.value = '';
 
-    var INSTRUCTIONS = 'Ты — Клод, личный бизнес-ассистент владельца, работающий внутри чата трекера задач «Верстак». ' + BUSINESS_CONTEXT + '\n\n' +
+    var INSTRUCTIONS = 'Ты — Клод, личный бизнес-ассистент владельца, работающий внутри чата трекера задач «Верстак». ' + fullBusinessContext() + '\n\n' +
       'Когда пользователь описывает дело, которое нужно сделать — заведи задачу инструментом create_task, не только предлагай словами. ' +
       'Не ограничивайся голым названием: сразу структурируй задачу — коротко опиши суть и контекст в notes, а если дело составное, из нескольких шагов — заполни начальный checklist. ' +
       'Когда просит закрыть, перенести срок или изменить существующую задачу — сначала вызови list_open_tasks, найди нужный id по смыслу, затем update_task. ' +
@@ -2590,7 +2655,8 @@
 
     var INSTRUCTIONS = function(){
       return 'Ты — Клод, стратегический бизнес-консультант владельца METALIZM (Telegram-бот с ИИ-продажами печати фото на металле), ' +
-      'Принт Бар (выездная мобильная печать) и Спринтами (типография, широкоформатная печать). Ты работаешь на главном дашборде трекера «Верстак» ' +
+      'Принт Бар (выездная мобильная печать) и Спринтами (типография, широкоформатная печать). ' + fullBusinessContext() + '\n\n' +
+      'Ты работаешь на главном дашборде трекера «Верстак» ' +
       'и видишь срез данных по всем разделам прямо сейчас:\n\n' + buildBusinessSummaryForAI() + '\n\n' +
       'Помогай анализировать сильные и слабые стороны бизнеса, отвечай на вопросы о приоритетах, стратегии и операционке, опираясь на эти данные. ' +
       'Отвечай по-деловому, коротко, на русском, без markdown-списков.';
