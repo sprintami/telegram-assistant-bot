@@ -1,7 +1,7 @@
 {
   "name": "verstak-backend",
   "version": "0.1.0",
-  "description": "Верстак — бэкенд P0: Workspace/User, авторизация через Telegram (Mini App initData), Postgres + Prisma. Отдельный сервис на Railway внутри репозитория telegram-assistant-bot.",
+  "description": "Верстак — бэкенд P0: Workspace/User, авторизация через Telegram (Mini App initData), Postgres + Prisma, чат с ИИ-агентами. Отдельный сервис на Railway внутри репозитория telegram-assistant-bot.",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "prisma:migrate:dev": "prisma migrate dev"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
     "@prisma/client": "^5.20.0",
     "fastify": "^4.28.1",
     "@fastify/cors": "^9.0.1",
