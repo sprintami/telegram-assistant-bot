@@ -103,3 +103,62 @@ export async function sendAgentMessage(
     body: JSON.stringify({ content }),
   });
 }
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string | null;
+  project: "METALIZM" | "PRINTBAR" | "SPRINTAMI" | "OTHER";
+  lever?: "SALES" | "OPS" | "SCALE" | null;
+  status: "NEW" | "IN_PROGRESS" | "DONE";
+  dueDate?: string | null;
+  checklist?: { text: string; done: boolean }[] | null;
+  createdByAgentKey?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchTasks(token: string): Promise<{ tasks: Task[] }> {
+  return request("/tasks", token);
+}
+
+export async function createTask(
+  token: string,
+  data: {
+    title: string;
+    description?: string;
+    project?: string;
+    lever?: string;
+    dueDate?: string;
+  },
+): Promise<{ task: Task }> {
+  return request("/tasks", token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTask(
+  token: string,
+  id: string,
+  data: Partial<{
+    title: string;
+    description: string;
+    project: string;
+    lever: string;
+    status: string;
+    dueDate: string | null;
+    checklist: { text: string; done: boolean }[];
+  }>,
+): Promise<{ task: Task }> {
+  return request(`/tasks/${id}`, token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTask(token: string, id: string): Promise<void> {
+  await request(`/tasks/${id}`, token, { method: "DELETE" });
+}
