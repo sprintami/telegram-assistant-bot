@@ -27,7 +27,13 @@ function toApi(row: { id: string; data: unknown }) {
 }
 
 export async function internalRoutes(app: FastifyInstance) {
-  app.get("/internal/context", async (request, reply) => {
+  // Путь НЕ начинается с "/internal/" намеренно: запросы к "/internal/*" молча
+  // перехватываются где-то перед Fastify-приложением (похоже, зарезервированный
+  // префикс на стороне Railway/edge) и никогда не доходят до сервера — при
+  // проверке "/internal" в одиночку доходил и корректно давал 404 "not found",
+  // а "/internal/context" — нет, ни разу не попав в логи приложения. Поэтому
+  // используем отдельный от "/internal" префикс.
+  app.get("/verstak-context", async (request, reply) => {
     const secret = request.headers["x-internal-secret"];
     if (!secret || secret !== env.INTERNAL_API_KEY) {
       return reply.code(401).send({ error: "unauthorized" });
