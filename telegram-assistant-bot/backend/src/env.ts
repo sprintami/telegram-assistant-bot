@@ -43,4 +43,11 @@ export const env = {
 
     // OpenAI model for assistant replies.
     OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o",
+
+    // Shared secret for the /internal/* routes - server-to-server access from
+    // the personal Telegram bot (telegram-assistant-bot/src/ai.ts), which has
+    // no browser and no Telegram Mini App session, so it can't go through the
+    // normal requireAuth JWT flow. Same value set on both the backend and bot
+    // Railway services.
+    INTERNAL_API_KEY: required("INTERNAL_API_KEY"),
 };
