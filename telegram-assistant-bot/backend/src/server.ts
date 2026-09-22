@@ -10,6 +10,7 @@ import { tasksRoutes } from "./routes/tasks.js";
 import { recordsRoutes } from "./routes/records.js";
 import { chatRoutes } from "./routes/chat.js";
 import { imageRoutes } from "./routes/image.js";
+import { internalRoutes } from "./routes/internal.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +32,7 @@ await app.register(tasksRoutes);
 await app.register(recordsRoutes);
 await app.register(chatRoutes);
 await app.register(imageRoutes);
+await app.register(internalRoutes);
 
 // Frontend (public/index.html - the same Verstak, now a real site instead
 // of a Claude artifact) is served by this same service: one Railway
