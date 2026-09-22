@@ -14,8 +14,8 @@ export interface ChatTurn {
 
 // Базовый бизнес-контекст владельца — вшит всегда, независимо от того, заполнил ли
 // Булат /setprofile. Без этого блока бот отвечал как чистый лист ("нет информации о
-// компании Метализм", "нет доступа к интернету") — а должен вести себя как полноценный
-// бизнес-ассистент, знающий, чем владелец занимается, с первой же реплики.
+// компании Метализм") — а должен вести себя как полноценный бизнес-ассистент, знающий,
+// чем владелец занимается, с первой же реплики.
 const BUSINESS_CONTEXT = `Контекст бизнесов Булата (предприниматель из Казани):
 — METALIZM: печать фото на алюминии (ультра-глянец), гидроабразивная резка. B2C — портреты по фото на металле. B2B — коммерческая недвижимость, дропшиппинг, контрактное производство, аутсорс для типографий. У METALIZM есть свой Telegram-бот с ИИ-продажами («Лида»).
 — Принт Бар (Print Bar): выездная мобильная печать — 5 форматов за 15 минут на месте; цель — развитие во франшизу.
@@ -23,7 +23,71 @@ const BUSINESS_CONTEXT = `Контекст бизнесов Булата (пре
 — ARE Space / ARE Group: цифровая экосистема для управления коммерческой недвижимостью под брендом METALIZM.
 — Юридически всё оформлено через ИП Степанов Денис Николаевич.
 — Булат называет себя «коммерческим коннектором с харизмой» — продаёт не товар, а более сильную версию будущего клиента.
-Это твои базовые знания по умолчанию, используй их сразу и уверенно. Если реального доступа к интернету у тебя нет — не извиняйся за это и не изображай беспомощность: отвечай по существу на основе контекста и здравого бизнес-смысла, а если каких-то конкретных цифр или свежих данных не хватает — прямо скажи, каких именно, и предложи, откуда их взять, вместо общего "у меня нет информации".`;
+Это твои базовые знания по умолчанию, используй их сразу и уверенно.
+
+У тебя есть два реальных инструмента — пользуйся ими, а не оправдывайся их отсутствием:
+— web_search: настоящий поиск в интернете. Нужны свежие внешние данные (контакты, цены, список компаний, новости) — вызови его сам и ответь результатами, а не советуй "погуглить самому".
+— get_verstak_data: реальные данные Верстака (бизнес-системы Булата) — задачи и разделы «Продажи», «Производство», «Выручка», «Документы», «Регламенты», «Цели компании», «База знаний». Вопрос касается текущих дел, цифр или задач Булата — запроси нужные разделы, а не отвечай "у меня нет доступа к Верстаку".
+Если после вызова инструмента всё равно чего-то не хватает — прямо скажи, чего именно, вместо общего "у меня нет информации".`;
+
+// Инструмент чтения данных Верстака — выполняется прямо здесь, в боте
+// (fetchVerstakData ниже дёргает внутренний эндпоинт бэкенда), а не в браузере,
+// как у чатов внутри самого Верстака (см. backend/src/routes/chat.ts) — у
+// личного бота браузера нет, тул-юз он гоняет сам через Anthropic Messages API.
+const VERSTAK_TOOL = {
+  name: "get_verstak_data",
+  description:
+    "Получить актуальные данные из Верстака: задачи и записи по разделам продажи/производство/выручка/документы/регламенты/цели/база знаний. Используй, когда для ответа нужны реальные текущие данные, а не общие знания о бизнесе.",
+  input_schema: {
+    type: "object",
+    properties: {
+      modules: {
+        type: "array",
+        items: {
+          type: "string",
+          enum: [
+            "tasks",
+            "sales",
+            "production",
+            "finance",
+            "documents",
+            "regulations",
+            "goals",
+            "knowledge",
+          ],
+        },
+        description: "Какие разделы запросить. Если не уверен, какие нужны — запроси все сразу.",
+      },
+    },
+    required: ["modules"],
+  },
+};
+
+// Настоящий веб-поиск от Anthropic — выполняется на стороне API, боту не нужно
+// самому ходить в интернет и парсить результаты.
+const WEB_SEARCH_TOOL = {
+  type: "web_search_20250305",
+  name: "web_search",
+  max_uses: 5,
+};
+
+const TOOLS = [VERSTAK_TOOL, WEB_SEARCH_TOOL];
+
+async function fetchVerstakData(modules: string[]): Promise<string> {
+  try {
+    const url = new URL("/internal/context", env.BACKEND_BASE_URL);
+    url.searchParams.set("telegramId", String(env.OWNER_TELEGRAM_ID));
+    if (modules.length) url.searchParams.set("modules", modules.join(","));
+
+    const res = await fetch(url, { headers: { "x-internal-secret": env.INTERNAL_API_KEY } });
+    if (!res.ok) {
+      return `Не удалось получить данные Верстака (HTTP ${res.status}).`;
+    }
+    return JSON.stringify(await res.json());
+  } catch (err) {
+    return `Не удалось получить данные Верстака: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
 
 // Собираем системный промпт: базовый бизнес-контекст + профиль пользователя + сжатая память
 function buildSystemPrompt(profileText: string, summary: string): string {
@@ -52,25 +116,64 @@ async function askOpenAI(system: string, history: ChatTurn[], maxTokens: number)
   return response.choices[0]?.message?.content?.trim() || "(пустой ответ)";
 }
 
+// Цикл тул-юза: Claude может вызвать get_verstak_data (мы сами выполняем и
+// возвращаем результат) и web_search (Anthropic выполняет его на своей стороне —
+// в ответе просто появляются server_tool_use/web_search_tool_result блоки,
+// которые мы прозрачно прокидываем обратно как часть истории, ничего с ними не
+// делая). Останавливаемся, как только получаем финальный текстовый ответ, или
+// после MAX_STEPS шагов — чтобы не уйти в бесконечный цикл при странном
+// поведении модели.
+async function runClaudeToolLoop(system: string, messages: any[]): Promise<string> {
+  const MAX_STEPS = 5;
+  for (let step = 0; step < MAX_STEPS; step++) {
+    const response: any = await anthropic.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: 1536,
+      system,
+      messages,
+      tools: TOOLS as any,
+    });
+
+    const clientToolUses = (response.content as any[]).filter(
+      (b) => b.type === "tool_use" && b.name === "get_verstak_data"
+    );
+
+    if (response.stop_reason !== "tool_use" || clientToolUses.length === 0) {
+      const textBlock = (response.content as any[]).find((b) => b.type === "text");
+      return textBlock?.text?.trim() || "(пустой ответ)";
+    }
+
+    messages.push({ role: "assistant", content: response.content });
+
+    const toolResults = await Promise.all(
+      clientToolUses.map(async (block: any) => ({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: await fetchVerstakData(block.input?.modules ?? []),
+      }))
+    );
+
+    messages.push({ role: "user", content: toolResults });
+  }
+
+  return "Не получилось собрать ответ за разумное число шагов — попробуй переформулировать вопрос покороче.";
+}
+
 export async function askClaude(
   profileText: string,
   summary: string,
   history: ChatTurn[]
 ): Promise<string> {
   const system = buildSystemPrompt(profileText, summary);
+  const messages: any[] = history.map((m) => ({ role: m.role, content: m.content }));
+
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1024,
-      system,
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
-    });
-    const block = response.content[0];
-    return block.type === "text" ? block.text : "(пустой ответ)";
+    return await runClaudeToolLoop(system, messages);
   } catch (err) {
     if (!openai) throw err;
     // Claude недоступен (например, закончился баланс на Anthropic API) —
-    // временно отвечаем через ChatGPT, чтобы бот не молчал.
+    // временно отвечаем через ChatGPT. У ChatGPT здесь нет наших инструментов
+    // (Верстак/веб-поиск), только контекст и история — это лучше, чем молчание.
     console.error("Claude недоступен, переключаюсь на ChatGPT:", err);
     return askOpenAI(system, history, 1024);
   }
