@@ -20,4 +20,12 @@ export const env = {
   // Путь к файлу базы SQLite. На Railway указываем путь внутри примонтированного volume,
   // чтобы данные не терялись при каждом передеплое.
   DB_PATH: process.env.DB_PATH || "./data/bot.db",
+
+  // Публичный URL бэкенда верстака (backend/src/server.ts) — нужен, чтобы
+  // личный бот мог читать реальные данные верстака через /internal/context
+  // (см. src/ai.ts, инструмент get_verstak_data).
+  BACKEND_BASE_URL: required("BACKEND_BASE_URL"),
+  // Тот же секрет, что и INTERNAL_API_KEY у бэкенда — общий пароль для
+  // server-to-server запросов бота к /internal/*.
+  INTERNAL_API_KEY: required("INTERNAL_API_KEY"),
 };
