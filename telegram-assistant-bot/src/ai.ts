@@ -75,7 +75,7 @@ const TOOLS = [VERSTAK_TOOL, WEB_SEARCH_TOOL];
 
 async function fetchVerstakData(modules: string[]): Promise<string> {
   try {
-    const url = new URL("/internal/context", env.BACKEND_BASE_URL);
+    const url = new URL("/verstak-context", env.BACKEND_BASE_URL);
     url.searchParams.set("telegramId", String(env.OWNER_TELEGRAM_ID));
     if (modules.length) url.searchParams.set("modules", modules.join(","));
 
